@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
+    // NEXT_PUBLIC_ lets the client read the public vars the Vercel Supabase
+    // integration creates. Never add a bare SUPABASE_ prefix here — that
+    // would ship SUPABASE_SERVICE_ROLE_KEY / SUPABASE_JWT_SECRET to browsers.
+    envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,
