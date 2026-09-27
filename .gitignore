@@ -19,3 +19,7 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+
+# Local env values (prod values live in Vercel env vars)
+.env.local
+.env*.local
