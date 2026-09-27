@@ -1,0 +1,14 @@
+{
+  "title": "Invyta",
+  "description": "Create and send personalized online invitations effortlessly to streamline event planning and enhance guest engagement for any occasion.",
+  "icons": {
+    "icon": "/icons/icon-192.png"
+  },
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

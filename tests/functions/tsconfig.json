@@ -1,0 +1,26 @@
+{
+  // Type-checks the Supabase Edge Functions (Deno) with plain tsc: Deno's
+  // "npm:" import is mapped to the installed @supabase/supabase-js, and
+  // the Deno globals come from deno-shim.d.ts. Run: pnpm typecheck
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "npm:@supabase/supabase-js@2": ["../../node_modules/@supabase/supabase-js"]
+    }
+  },
+  "files": [
+    "deno-shim.d.ts",
+    "../../supabase/functions/create-checkout/index.ts",
+    "../../supabase/functions/confirm-checkout/index.ts",
+    "../../supabase/functions/paymongo-webhook/index.ts"
+  ]
+}

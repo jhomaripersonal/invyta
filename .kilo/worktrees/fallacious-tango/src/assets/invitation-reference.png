@@ -1,0 +1,1578 @@
+# INVYTA — COMPLETE FIGMA UI/UX DESIGN PROMPT
+
+Design a complete, modern, production-ready UI/UX concept for **Invyta**, a digital invitation and event management SaaS platform.
+
+## Product
+
+**Name:** Invyta
+**Tagline:** Create. Invite. Celebrate.
+
+Invyta allows users to create beautiful digital invitations for weddings, birthdays, debuts, baptisms, graduations, corporate events, reunions, and other celebrations.
+
+Unlike a simple invitation image generator, Invyta creates an **interactive invitation webpage** with RSVP, guest management, event schedules, venue information, countdowns, galleries, QR codes, check-in, and analytics.
+
+The product is initially designed for the **Philippine market**, so the interface should feel familiar and friendly to Filipino users while maintaining a premium international SaaS appearance.
+
+---
+
+# 1. DESIGN DIRECTION
+
+Create a design that feels:
+
+* Modern
+* Elegant
+* Warm
+* Premium
+* Minimal
+* Friendly
+* Easy to use
+* Emotionally engaging
+* Mobile-first for guests
+* Professional for event organizers
+
+Avoid making the interface look like a generic Canva clone.
+
+Invyta should feel like a combination of:
+
+* Modern SaaS dashboard
+* Premium wedding/event platform
+* Simple no-code website builder
+* Modern mobile invitation
+* Lightweight event management system
+
+The UI should have generous whitespace, strong typography, elegant cards, subtle shadows, smooth rounded corners, and tasteful animations.
+
+Do not overcrowd the interface.
+
+---
+
+# 2. COLOR SYSTEM
+
+Use a sophisticated neutral palette as the primary UI system.
+
+Primary:
+
+* Deep Charcoal
+* Warm White
+* Soft Cream
+* Neutral Gray
+
+Accent colors:
+
+* Champagne Gold
+* Soft Rose
+* Sage Green
+* Muted Blue
+
+The application should support theme customization for individual invitations.
+
+The dashboard itself should remain neutral and professional.
+
+Use color primarily for:
+
+* CTAs
+* Status indicators
+* Event categories
+* Important actions
+* Invitation previews
+
+Avoid excessive gradients.
+
+---
+
+# 3. TYPOGRAPHY
+
+Use a modern sans-serif font for the application UI.
+
+Suggested:
+
+* Inter
+* Manrope
+* Plus Jakarta Sans
+
+For invitation templates, allow elegant serif/display fonts such as:
+
+* Playfair Display
+* Cormorant Garamond
+* DM Serif Display
+
+Use strong typographic hierarchy.
+
+Example:
+
+Dashboard heading:
+
+"Good morning, Jhomari 👋"
+
+Large, clean, confident typography.
+
+Invitation heading:
+
+"Jhomari & Ann"
+
+Use elegant serif typography where appropriate.
+
+---
+
+# 4. DESIGN SYSTEM
+
+Create a reusable Figma design system.
+
+Include:
+
+### Colors
+
+* Primary
+* Secondary
+* Background
+* Surface
+* Border
+* Text Primary
+* Text Secondary
+* Success
+* Warning
+* Error
+* Info
+
+### Typography
+
+* Display
+* H1
+* H2
+* H3
+* Body Large
+* Body
+* Body Small
+* Caption
+
+### Components
+
+Create reusable components for:
+
+* Buttons
+* Inputs
+* Selects
+* Date picker
+* Time picker
+* Cards
+* Tabs
+* Dropdowns
+* Modals
+* Toast notifications
+* Badges
+* Avatar
+* Navigation
+* Sidebar
+* Breadcrumbs
+* Progress indicators
+* Empty states
+* Loading states
+* Confirmation dialogs
+
+Create variants for:
+
+* Default
+* Hover
+* Active
+* Disabled
+* Loading
+* Error
+* Success
+
+---
+
+# 5. RESPONSIVE DESIGN
+
+Design three major breakpoints:
+
+### Desktop
+
+1440px
+
+### Tablet
+
+1024px
+
+### Mobile
+
+390px
+
+The organizer dashboard should be optimized for desktop.
+
+The public invitation should be optimized primarily for mobile.
+
+---
+
+# 6. INFORMATION ARCHITECTURE
+
+Create the following application structure:
+
+Dashboard
+
+├── Events
+│   ├── All Events
+│   ├── Upcoming
+│   └── Past Events
+│
+├── Templates
+│
+├── Event
+│   ├── Overview
+│   ├── Invitation
+│   ├── Guests
+│   ├── RSVP
+│   ├── Check-in
+│   ├── Analytics
+│   └── Settings
+│
+├── Billing
+│
+└── Account
+
+---
+
+# 7. LANDING PAGE
+
+Create a polished marketing landing page.
+
+Hero section:
+
+Headline:
+
+"Beautiful invitations. Smarter events."
+
+Subheadline:
+
+"Create a stunning digital invitation, collect RSVPs, manage your guests, and make every event easier."
+
+Primary CTA:
+
+"Create an Invitation"
+
+Secondary CTA:
+
+"Explore Templates"
+
+Hero visual:
+
+Show a beautiful wedding invitation displayed on a smartphone alongside a desktop dashboard showing RSVP statistics.
+
+Add subtle floating UI cards:
+
+"87 Guests Confirmed"
+
+"12 RSVPs Pending"
+
+"✓ 45 Checked In"
+
+---
+
+# 8. LANDING PAGE SECTIONS
+
+Include:
+
+### Hero
+
+"Beautiful invitations. Smarter events."
+
+### How It Works
+
+1. Choose a template
+2. Customize your invitation
+3. Share with your guests
+4. Track RSVPs
+
+### Template Showcase
+
+Show beautiful invitation previews.
+
+Categories:
+
+* Wedding
+* Birthday
+* Debut
+* Baptism
+* Graduation
+* Corporate
+
+### Features
+
+Interactive invitations
+
+RSVP management
+
+Guest management
+
+QR check-in
+
+Event analytics
+
+AI invitation creation
+
+### AI Section
+
+Headline:
+
+"Describe your event. Let AI design the starting point."
+
+Example:
+
+"I want a minimalist beige and gold wedding invitation."
+
+Show AI-generated invitation preview.
+
+### Filipino Events Section
+
+Show:
+
+"Made for celebrations that matter."
+
+Cards:
+
+Wedding
+
+Debut
+
+Baptism
+
+Birthday
+
+Graduation
+
+Christmas Party
+
+### Pricing
+
+Free
+
+Premium
+
+Pro
+
+### Testimonials
+
+Use realistic placeholder testimonials.
+
+### Footer
+
+Product
+
+Templates
+
+Pricing
+
+Features
+
+Help Center
+
+Terms
+
+Privacy
+
+---
+
+# 9. AUTHENTICATION
+
+Create:
+
+### Login
+
+Fields:
+
+Email
+
+Password
+
+CTA:
+
+"Sign In"
+
+Social login:
+
+"Continue with Google"
+
+Links:
+
+Forgot password?
+
+Create account
+
+### Registration
+
+Fields:
+
+Name
+
+Email
+
+Password
+
+Confirm password
+
+CTA:
+
+"Create Account"
+
+---
+
+# 10. ONBOARDING
+
+After registration, create a simple onboarding flow.
+
+Screen 1:
+
+"Welcome to Invyta 👋"
+
+"What are you celebrating?"
+
+Cards:
+
+🎂 Birthday
+
+💍 Wedding
+
+👶 Baptism
+
+🎓 Graduation
+
+🎉 Debut
+
+🏢 Corporate
+
+✨ Other
+
+Screen 2:
+
+"What would you like to do?"
+
+* Create an invitation
+* Explore templates
+* Try AI
+
+Screen 3:
+
+"Let's create your first event."
+
+---
+
+# 11. DASHBOARD
+
+Create a polished SaaS dashboard.
+
+Sidebar:
+
+Invyta logo
+
+Dashboard
+
+Events
+
+Templates
+
+Analytics
+
+Billing
+
+Settings
+
+Help
+
+Bottom:
+
+User avatar
+
+Jhomari Atienza
+
+Free Plan
+
+Main content:
+
+"Good morning, Jhomari 👋"
+
+"Create your next unforgettable event."
+
+Primary CTA:
+
+"+ Create Event"
+
+Metrics:
+
+Active Events
+
+12
+
+Total Guests
+
+342
+
+Confirmed
+
+287
+
+Pending
+
+55
+
+Upcoming Events section.
+
+Event cards should contain:
+
+Event image
+
+Event name
+
+Event type
+
+Date
+
+Guest count
+
+RSVP status
+
+Progress bar
+
+Actions:
+
+Manage
+
+Preview
+
+Share
+
+---
+
+# 12. CREATE EVENT FLOW
+
+Create a multi-step wizard.
+
+Step indicator:
+
+1. Event
+2. Details
+3. Template
+4. Customize
+5. Guests
+6. Publish
+
+Step 1:
+
+"What are you celebrating?"
+
+Step 2:
+
+Event name
+
+Date
+
+Time
+
+Venue
+
+Description
+
+Step 3:
+
+Template selection
+
+Step 4:
+
+Invitation customization
+
+Step 5:
+
+Guest list
+
+Step 6:
+
+Publish
+
+---
+
+# 13. TEMPLATE MARKETPLACE
+
+Create a visually rich template browsing page.
+
+Header:
+
+"Find your perfect invitation"
+
+Search bar:
+
+"Search templates..."
+
+Filters:
+
+All
+
+Wedding
+
+Birthday
+
+Debut
+
+Baptism
+
+Graduation
+
+Corporate
+
+Style:
+
+Minimal
+
+Elegant
+
+Luxury
+
+Floral
+
+Modern
+
+Traditional
+
+Kids
+
+Display templates in a beautiful responsive grid.
+
+Each card should contain:
+
+Template preview
+
+Template name
+
+Category
+
+Free/Premium badge
+
+"Preview"
+
+"Use Template"
+
+---
+
+# 14. INVITATION BUILDER
+
+This is the most important UI.
+
+Create a professional no-code editor.
+
+Desktop layout:
+
+LEFT SIDEBAR
+
+Sections
+
+* Cover
+* Details
+* Story
+* Schedule
+* Gallery
+* Venue
+* Dress Code
+* Entourage
+* Gift Registry
+* RSVP
+* Countdown
+* FAQ
+
+CENTER
+
+Live invitation preview.
+
+RIGHT SIDEBAR
+
+Customization properties.
+
+Tabs:
+
+Design
+
+Content
+
+Style
+
+Animation
+
+Top toolbar:
+
+Undo
+
+Redo
+
+Preview
+
+Save
+
+Publish
+
+The builder should feel extremely simple.
+
+Avoid overwhelming the user with too many controls.
+
+---
+
+# 15. INVITATION BUILDER — DESIGN TAB
+
+Controls:
+
+Theme
+
+Color palette
+
+Typography
+
+Background
+
+Buttons
+
+Spacing
+
+Section style
+
+Animation
+
+Provide visual controls instead of complicated settings.
+
+Example:
+
+COLOR
+
+○ ○ ○ ○ ○
+
+FONT
+
+Heading:
+
+Playfair Display
+
+Body:
+
+Inter
+
+BUTTON STYLE
+
+Rounded
+
+Square
+
+Outline
+
+---
+
+# 16. INVITATION BUILDER — CONTENT TAB
+
+When selecting a section, show contextual editing.
+
+Example:
+
+Hero section:
+
+Title:
+
+"Jhomari & Ann"
+
+Subtitle:
+
+"We're getting married"
+
+Date:
+
+"September 25, 2026"
+
+CTA:
+
+"RSVP"
+
+Image upload:
+
+"Change Cover Photo"
+
+---
+
+# 17. LIVE PREVIEW
+
+The invitation preview should look like a real smartphone webpage.
+
+Show:
+
+Cover photo
+
+Names
+
+Event date
+
+Countdown
+
+Story
+
+Schedule
+
+Venue
+
+Gallery
+
+RSVP
+
+Footer
+
+Allow preview switching:
+
+Desktop
+
+Tablet
+
+Mobile
+
+---
+
+# 18. AI ASSISTANT
+
+Add a floating AI button inside the builder:
+
+"✨ AI Assistant"
+
+When opened:
+
+"How can I help?"
+
+Quick actions:
+
+* Write invitation
+* Make it elegant
+* Make it casual
+* Make it romantic
+* Make it funny
+* Make it Filipino
+* Make it Taglish
+* Shorten text
+* Rewrite text
+
+Also provide:
+
+"Generate my invitation"
+
+Prompt field:
+
+"Tell us about your event..."
+
+Example:
+
+"My daughter is turning 7. She loves unicorns and pastel colors."
+
+CTA:
+
+"Generate Invitation"
+
+---
+
+# 19. GUEST MANAGEMENT
+
+Create guest management dashboard.
+
+Header:
+
+"Guests"
+
+Actions:
+
+* Add Guest
+
+Import CSV
+
+Search guests
+
+Filters:
+
+All
+
+Confirmed
+
+Pending
+
+Declined
+
+Checked In
+
+Guest table:
+
+Name
+
+Group
+
+RSVP
+
+Guests
+
+Check-in
+
+Actions
+
+Example:
+
+Maria Santos
+
+Family
+
+Confirmed
+
+4
+
+Checked In
+
+Juan Cruz
+
+Friends
+
+Pending
+
+*
+
+Not Checked In
+
+---
+
+# 20. ADD GUEST MODAL
+
+Fields:
+
+First Name
+
+Last Name
+
+Email
+
+Phone
+
+Group
+
+Number of Guests
+
+Notes
+
+Checkbox:
+
+"Send invitation"
+
+CTA:
+
+"Add Guest"
+
+---
+
+# 21. PERSONALIZED INVITATION
+
+Create a screen explaining personalized invitations.
+
+Example:
+
+"Give every guest their own invitation."
+
+Show:
+
+Maria's invitation
+
+"Dear Maria ❤️"
+
+Unique invitation URL.
+
+Button:
+
+"Copy Guest Link"
+
+---
+
+# 22. RSVP DASHBOARD
+
+Create a visually attractive analytics dashboard.
+
+Header:
+
+"RSVP Overview"
+
+Cards:
+
+Total Guests
+
+108
+
+Confirmed
+
+87
+
+Pending
+
+12
+
+Declined
+
+9
+
+Charts:
+
+RSVP status donut chart.
+
+Attendance trend.
+
+Guest groups.
+
+Meal preferences.
+
+---
+
+# 23. CHECK-IN
+
+Create a dedicated event check-in screen.
+
+Large QR scanner area.
+
+Header:
+
+"Event Check-in"
+
+Display:
+
+"87 / 108 guests checked in"
+
+Scanner:
+
+"Scan Guest QR Code"
+
+Alternative:
+
+"Search guest name"
+
+Guest result:
+
+Maria Santos
+
+Family
+
+4 Guests
+
+Confirmed
+
+Button:
+
+"Check In"
+
+After check-in:
+
+✓ Successfully checked in
+
+---
+
+# 24. EVENT ANALYTICS
+
+Create dashboard:
+
+Invitation Views
+
+342
+
+Unique Visitors
+
+287
+
+RSVP Conversion
+
+37.6%
+
+QR Scans
+
+98
+
+Check-ins
+
+87
+
+Charts:
+
+Views over time
+
+RSVP conversion
+
+Guest attendance
+
+Traffic sources
+
+---
+
+# 25. EVENT SETTINGS
+
+Sections:
+
+Event Details
+
+Invitation Settings
+
+Guest Settings
+
+RSVP Settings
+
+Privacy
+
+Notifications
+
+Danger Zone
+
+Controls:
+
+Published
+
+Unpublished
+
+Password protection
+
+Allow RSVP changes
+
+Allow plus ones
+
+Allow guest messages
+
+---
+
+# 26. BILLING
+
+Create a clean pricing/billing page.
+
+Plans:
+
+### FREE
+
+₱0
+
+Basic templates
+
+Basic RSVP
+
+Basic guest list
+
+Standard URL
+
+### PREMIUM
+
+₱199 / event
+
+Premium templates
+
+Unlimited guests
+
+Custom URL
+
+Gallery
+
+Analytics
+
+QR code
+
+No branding
+
+### PRO
+
+₱499 / event
+
+Everything in Premium
+
+Personalized invitations
+
+AI generator
+
+AI writing
+
+QR check-in
+
+Advanced guest management
+
+---
+
+# 27. MOBILE PUBLIC INVITATION
+
+This is one of the most important screens.
+
+Design a beautiful mobile invitation at 390px width.
+
+Example wedding:
+
+Hero:
+
+[Large couple photo]
+
+"Jhomari & Ann"
+
+"Are getting married"
+
+"September 25, 2026"
+
+Countdown:
+
+12 Days
+
+04 Hours
+
+32 Minutes
+
+CTA:
+
+"RSVP"
+
+Then:
+
+Our Story
+
+Schedule
+
+Venue
+
+Gallery
+
+Dress Code
+
+Entourage
+
+RSVP
+
+Footer
+
+The invitation should feel premium and emotional rather than like a dashboard.
+
+---
+
+# 28. MOBILE RSVP
+
+Create a simple RSVP experience.
+
+Header:
+
+"Will you celebrate with us?"
+
+Options:
+
+❤️ Yes, I'll be there
+
+😢 Sorry, I can't make it
+
+Then:
+
+Number of guests
+
+Meal preference
+
+Message
+
+CTA:
+
+"Confirm RSVP"
+
+Confirmation:
+
+"You're on the guest list! ❤️"
+
+---
+
+# 29. EVENT INVITATION STATES
+
+Design states for:
+
+Draft
+
+Published
+
+Unpublished
+
+Expired
+
+Archived
+
+RSVP Open
+
+RSVP Closed
+
+---
+
+# 30. EMPTY STATES
+
+Create elegant empty states.
+
+Example:
+
+"No events yet"
+
+"Your next celebration starts here."
+
+CTA:
+
+"Create Your First Event"
+
+Guest empty state:
+
+"No guests added yet."
+
+"Add your guests or import your guest list."
+
+---
+
+# 31. NOTIFICATIONS
+
+Create notification center.
+
+Examples:
+
+"Maria confirmed attendance."
+
+"Juan declined the invitation."
+
+"You have 12 pending RSVPs."
+
+"Your event is 7 days away."
+
+---
+
+# 32. FILIPINO LOCALIZATION
+
+Include visual examples using Filipino/Taglish copy.
+
+Example:
+
+"Tara, celebrate tayo! 🎉"
+
+"You're invited!"
+
+"Salubungin natin ang bagong chapter..."
+
+"Maraming salamat sa pagsama sa aming espesyal na araw."
+
+The interface should remain primarily English while allowing invitation content to be English, Filipino, or Taglish.
+
+---
+
+# 33. SAMPLE DATA
+
+Use realistic sample data.
+
+Primary demo event:
+
+Jhomari & Ann
+
+Wedding
+
+September 25, 2026
+
+The Blue Leaf
+
+Taguig City
+
+108 Guests
+
+87 Confirmed
+
+12 Pending
+
+9 Declined
+
+Use realistic Filipino names in guest lists:
+
+Maria Santos
+
+Juan Dela Cruz
+
+Ana Reyes
+
+Mark Bautista
+
+Sofia Garcia
+
+---
+
+# 34. MICROINTERACTIONS
+
+Use subtle animations:
+
+* Button hover
+* Card hover
+* Invitation section transitions
+* Template selection animation
+* RSVP success animation
+* Check-in success animation
+* Toast notifications
+* Smooth modal transitions
+* Builder drag/drop feedback
+* Save indicator
+
+Animations should be elegant and fast.
+
+Avoid excessive motion.
+
+---
+
+# 35. ACCESSIBILITY
+
+Follow accessible design principles:
+
+* Strong color contrast
+* Keyboard navigation
+* Visible focus states
+* Clear error messages
+* Large touch targets
+* Accessible form labels
+* Do not rely on color alone for status
+
+---
+
+# 36. FIGMA FILE STRUCTURE
+
+Organize the Figma file into pages:
+
+01 — Cover
+
+02 — Design System
+
+03 — Landing Page
+
+04 — Authentication
+
+05 — Onboarding
+
+06 — Dashboard
+
+07 — Events
+
+08 — Templates
+
+09 — Invitation Builder
+
+10 — Guest Management
+
+11 — RSVP
+
+12 — Check-in
+
+13 — Analytics
+
+14 — Billing
+
+15 — Public Invitations
+
+16 — Mobile RSVP
+
+17 — Components
+
+18 — Prototype Flows
+
+---
+
+# 37. REQUIRED FIGMA PROTOTYPES
+
+Create clickable prototype flows for:
+
+### Flow 1 — New User
+
+Landing Page
+
+→ Sign Up
+
+→ Onboarding
+
+→ Create Event
+
+→ Choose Template
+
+→ Customize
+
+→ Publish
+
+### Flow 2 — Guest RSVP
+
+Invitation
+
+→ RSVP
+
+→ Confirmation
+
+### Flow 3 — Organizer
+
+Dashboard
+
+→ Event
+
+→ Guests
+
+→ RSVP
+
+→ Check-in
+
+### Flow 4 — AI
+
+Dashboard
+
+→ Create Event
+
+→ AI Generator
+
+→ Enter Event Description
+
+→ Generate
+
+→ Customize
+
+→ Publish
+
+---
+
+# 38. IMPORTANT DESIGN PRINCIPLE
+
+The organizer experience and guest experience should feel like two different products.
+
+### Organizer
+
+Professional SaaS.
+
+Clean.
+
+Efficient.
+
+Data-driven.
+
+### Guest
+
+Beautiful.
+
+Emotional.
+
+Immersive.
+
+Simple.
+
+No unnecessary navigation.
+
+The guest should be able to open the invitation and understand what to do within seconds.
+
+---
+
+# 39. FINAL DESIGN GOAL
+
+The finished Figma project should look like a real startup product ready for development.
+
+Do NOT create generic wireframes.
+
+Create:
+
+* High-fidelity screens
+* Realistic content
+* Consistent design system
+* Reusable components
+* Responsive layouts
+* Desktop dashboard
+* Mobile invitation
+* Interactive prototype
+* Modern visual hierarchy
+* Production-ready UI patterns
+
+The final impression should be:
+
+> **"This looks like a real SaaS product I could launch."**
+
+Invyta should feel premium enough for weddings, simple enough for birthdays, and practical enough for corporate events.
+
+The core experience should communicate:
+
+**Create. Invite. Celebrate.**

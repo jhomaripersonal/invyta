@@ -1,0 +1,41 @@
+{
+  "name": "figma-make-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "oxfmt",
+    "typecheck": "tsc --noEmit -p . && tsc -p tests/functions/tsconfig.json",
+    "test": "pnpm test:sql && pnpm test:functions && pnpm test:templates && pnpm test:unit",
+    "test:sql": "node tests/sql/run.mjs",
+    "test:functions": "node tests/functions/paymongo.test.mjs && node tests/functions/invite.test.mjs",
+    "test:templates": "node tests/templates/designs.test.mjs",
+    "test:unit": "node tests/unit/video-embed.test.mjs && node tests/unit/theme-palettes.test.mjs && node tests/unit/guest-tools.test.mjs && node tests/unit/auth-errors.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "framer-motion": "^13.2.0",
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.18.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "~0.2.17",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "oxfmt": "^0.2.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^8.0.5"
+  }
+}

@@ -1,0 +1,123 @@
+/* Web fonts are loaded from index.html (one request, started in parallel
+   with the app) rather than @import-ed here, where they'd only be
+   discovered after this stylesheet downloads. */
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: #FAF8F5;
+  --color-foreground: #1C2942;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #1C2942;
+  --color-primary: #1C2942;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #F5F0E8;
+  --color-secondary-foreground: #57534E;
+  --color-muted: #F5F0E8;
+  --color-muted-foreground: #78716C;
+  --color-accent: #E8C5C1;
+  --color-accent-foreground: #1C2942;
+  --color-border: #E7E1D8;
+  --color-ring: #1C2942;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --radius: 0.75rem;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: #E7E1D8 transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #FAF8F5;
+  color: #1C2942;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+/* Deliberate, branded focus state — most inputs across the app set
+   outline-none with nothing replacing it, which both fails a WCAG
+   visible-focus check and is a big part of why bare form fields read as
+   an unstyled template. box-shadow (not outline) so it doesn't collide
+   with the per-element outline-none utility classes; border-color as
+   !important so it wins over each input's inline border style. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  box-shadow: 0 0 0 3px rgba(28, 41, 66, 0.25);
+  border-color: #1C2942 !important;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(28, 41, 66, 0.6);
+  outline-offset: 2px;
+}
+
+/* Background-music button: equalizer bars while the song plays. */
+@keyframes invyta-music-bar {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+.invyta-music-bar {
+  height: 60%;
+  animation: invyta-music-bar 0.9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .invyta-music-bar { animation: none; }
+}
+
+/* Landing page: the strip of invitation covers. Two identical tracks, each
+   with its own trailing gap, so -50% lands exactly on the seam. */
+.invyta-marquee-viewport {
+  overflow: hidden;
+}
+.invyta-marquee {
+  display: flex;
+  width: max-content;
+  animation: invyta-marquee 70s linear infinite;
+}
+.invyta-marquee:hover,
+.invyta-marquee:focus-within {
+  animation-play-state: paused;
+}
+@keyframes invyta-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Holds still; scroll it by hand instead. */
+  .invyta-marquee-viewport {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .invyta-marquee-viewport::-webkit-scrollbar {
+    display: none;
+  }
+  .invyta-marquee {
+    animation: none;
+  }
+}
+
+/* Buttons rise a pixel under a pointer and settle when pressed. Pointer
+   devices only — on touch, :hover sticks after a tap. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .btn-lift:hover {
+    transform: translateY(-1px);
+  }
+  .btn-lift:active {
+    transform: none;
+  }
+}

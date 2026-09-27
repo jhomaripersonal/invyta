@@ -1,0 +1,17 @@
+{
+  "title": "Invyta — Digital invitations for every Filipino celebration",
+  "description": "Beautiful digital invitations for Filipino weddings, debuts, binyag and every celebration — with RSVPs, guest lists, reminders and QR check-in. Free to start.",
+  "icons": {
+    "icon": "/icons/icon-192.png"
+  },
+  "robots": {
+    "index": true
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  },
+  "openGraph": {
+    "image": "/og-image.jpg"
+  }
+}

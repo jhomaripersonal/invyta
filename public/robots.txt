@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /reset-password
+Disallow: /payment
