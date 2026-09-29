@@ -6,17 +6,7 @@ import { GUEST_QR_PREFIX } from "../../lib/guest-qr";
 import { Icon } from "../../components/Icon";
 import UpgradeNotice from "../../components/UpgradeNotice";
 import { planAllows, requiredPlanLabel } from "../../data/plan-limits";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-  green: "#4CAF7D",
-  red: "#E55757",
-};
+import { T } from "../../lib/tokens";
 
 const SCANNER_REGION_ID = "invyta-qr-scanner-region";
 

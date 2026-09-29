@@ -4,18 +4,10 @@ import { useEvents, type NewEventInput } from "../../lib/events-store";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_GROUPS } from "../../data/event-categories";
 import { TEMPLATES, templatesForCategory } from "../../data/templates";
 import { accountPlan, planAllows } from "../../data/plan-limits";
+import { formatPeso, upgradePriceCentavos } from "../../data/pricing";
 import { useAuth } from "../../lib/auth-context";
 import type { EventCategory } from "../../types/models";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-};
+import { T } from "../../lib/tokens";
 
 const STEPS = ["Event", "Details", "Template"];
 
@@ -157,7 +149,7 @@ export default function CreateEventWizard() {
           <h1 className="text-2xl font-bold mb-1" style={{ letterSpacing: "-0.025em" }}>Pick a starting template</h1>
           <p className="text-sm mb-7" style={{ color: T.muted }}>
             You can customize everything once the invitation builder is ready.
-            {!canUsePremium && " Premium templates: create your event, then upgrade it (from ₱199) and apply one from the builder's Design tab."}
+            {!canUsePremium && ` Premium templates: create your event, then upgrade it (from ${formatPeso(upgradePriceCentavos("free", "premium"))}) and apply one from the builder's Design tab.`}
           </p>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
             {templatesForCategory(category).map((t) => {
@@ -191,7 +183,7 @@ export default function CreateEventWizard() {
         </div>
       )}
 
-      {error && <p className="text-xs mb-4" style={{ color: "#E55757" }}>{error}</p>}
+      {error && <p className="text-xs mb-4" style={{ color: T.red }}>{error}</p>}
 
       {/* Nav buttons */}
       <div className="flex items-center justify-between mt-10">

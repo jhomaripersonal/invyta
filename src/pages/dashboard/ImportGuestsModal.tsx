@@ -2,17 +2,8 @@ import { useRef, useState, type ChangeEvent } from "react";
 import type { GuestGroup } from "../../types/models";
 import type { NewGuestInput } from "../../lib/guests-store";
 import { GROUP_LABELS } from "./GuestFormModal";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-  red: "#E55757",
-};
+import { T } from "../../lib/tokens";
+import { useDialog } from "../../components/useDialog";
 
 // Header aliases, compared after lowercasing and stripping everything but
 // letters — so "Full Name", "full_name" and "FULLNAME" all match "fullname".
@@ -131,6 +122,7 @@ export default function ImportGuestsModal({ eventName, remainingSlots, onImport,
   onImport: (guests: ParsedGuest[]) => Promise<void>;
   onClose: () => void;
 }) {
+  const dialog = useDialog(onClose);
   const [fileName, setFileName] = useState("");
   const [guests, setGuests] = useState<ParsedGuest[]>([]);
   const [skipped, setSkipped] = useState(0);
@@ -177,9 +169,9 @@ export default function ImportGuestsModal({ eventName, remainingSlots, onImport,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(28, 41, 66,0.45)" }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
+      <div {...dialog.props} className="outline-none w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 mb-1">
-          <h2 className="text-lg font-bold" style={{ color: T.charcoal }}>Import guests</h2>
+          <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>Import guests</h2>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100" style={{ color: T.muted }} aria-label="Close">✕</button>
         </div>
         <p className="text-sm mb-5" style={{ color: T.muted }}>

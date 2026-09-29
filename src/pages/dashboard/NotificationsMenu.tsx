@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../lib/auth-context";
 import { useGuests, type RecentResponse } from "../../lib/guests-store";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-  green: "#4CAF7D",
-  red: "#E55757",
-};
+import { T } from "../../lib/tokens";
 
 // When this organizer last opened the bell, per browser. Only decides
 // whether the unread dot shows, so a blocked or cleared localStorage just

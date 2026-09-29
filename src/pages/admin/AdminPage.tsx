@@ -9,19 +9,7 @@ import { listTestimonials, setTestimonialStatus, type Testimonial, type Testimon
 import { formatPeso } from "../../data/pricing";
 import { planLabel } from "../../data/plan-limits";
 import type { PlanTier } from "../../types/models";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-  green: "#2E7D55",
-  amber: "#8A6A33",
-  red: "#C24141",
-};
+import { T } from "../../lib/tokens";
 
 type Tab = "overview" | "sales" | "support" | "testimonials" | "users";
 

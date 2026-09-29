@@ -16,17 +16,7 @@ import {
 } from "../../lib/testimonials";
 import { supabase } from "../../lib/supabase-client";
 import { planLabel } from "../../data/plan-limits";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  white: "#FFFFFF",
-  green: "#4CAF7D",
-  red: "#E55757",
-};
+import { T } from "../../lib/tokens";
 
 const inputStyle = { border: `1px solid ${T.border}`, backgroundColor: T.cream, color: T.charcoal };
 const inputClass = "w-full px-3.5 py-2.5 rounded-xl text-sm outline-none";

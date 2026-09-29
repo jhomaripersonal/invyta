@@ -9,16 +9,7 @@ import { COVER_STYLES, coverStyle, type CoverStyle } from "../../../data/page-la
 import { SECTION_STYLES, sectionStyle } from "../../../data/section-styles";
 import { MAX_VIDEOS, parseVideoUrl, type VideoProvider } from "../../../lib/video-embed";
 import { MAX_QUESTIONS, type RsvpQuestion } from "../../../lib/rsvp-settings";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  red: "#E55757",
-  white: "#FFFFFF",
-};
+import { T } from "../../../lib/tokens";
 
 const inputStyle = { border: `1px solid ${T.border}`, backgroundColor: T.white, color: T.charcoal };
 const inputClass = "w-full px-3 py-2 rounded-lg text-sm outline-none";

@@ -40,6 +40,10 @@
 *.m4a                filter=lfs diff=lfs merge=lfs -text
 *.wma                filter=lfs diff=lfs merge=lfs -text
 *.aiff               filter=lfs diff=lfs merge=lfs -text
+# Audio the site itself serves (e.g. the sample invitation's music) stays a
+# regular git file, like the images above — Vercel would otherwise deploy
+# the LFS pointer instead of the song.
+public/audio/*       -filter binary
 
 # ---------------------------------------------------------------------------
 # 3D & Game Assets

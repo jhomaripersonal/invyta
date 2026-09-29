@@ -6,7 +6,7 @@
 // still loads offline or on a flaky connection, while cross-origin
 // requests (Supabase API/auth, Unsplash images) are left completely
 // untouched so this never interferes with live data or auth.
-const CACHE_NAME = "invyta-v1";
+const CACHE_NAME = "invyta-v2";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -24,6 +24,10 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
+  // Audio and video (e.g. the sample invitation's music) stream in partial
+  // "range" chunks, which the Cache API can't store — and a whole song
+  // isn't worth keeping offline anyway. Let the browser handle them.
+  if (request.headers.has("range") || request.destination === "audio" || request.destination === "video") return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {

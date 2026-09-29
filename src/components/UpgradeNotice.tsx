@@ -1,11 +1,4 @@
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-};
+import { T } from "../lib/tokens";
 
 // Shown in place of a dashboard feature the organizer's plan doesn't
 // include (see planAllows in src/data/plan-limits.ts).

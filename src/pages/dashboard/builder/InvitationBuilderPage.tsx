@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEvents, type EventRecord } from "../../../lib/events-store";
 import type { InvitationConfig, InvitationSectionType } from "../../../types/models";
@@ -11,16 +11,25 @@ import UpgradeEventModal from "../UpgradeEventModal";
 import LinkModal from "./LinkModal";
 import { EventPlanProvider } from "../../../lib/event-plan-context";
 import { planLabel } from "../../../data/plan-limits";
+import { useToast } from "../../../components/Toast";
+import PageLoader from "../../../components/PageLoader";
+import ConfirmDialog from "../../../components/ConfirmDialog";
+import { T } from "../../../lib/tokens";
 
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-};
+// How long typing has to pause before the invitation saves on its own.
+const AUTOSAVE_DELAY_MS = 1200;
+
+type SaveState = "saved" | "unsaved" | "saving" | "error";
+
+// The database rejects a gallery over the plan's photo limit, or a Premium
+// gallery style / page layout / cover style on a lower plan, with a
+// readable message (see gallery_photo_limit, gallery_style_is_premium and
+// design_style_is_premium in schema.sql) — show it rather than the generic
+// failure.
+function saveErrorMessage(err: unknown): string {
+  const message = (err as { message?: string } | null)?.message ?? "";
+  return /gallery photos|Premium plan|Pro plan/.test(message) ? message : "Couldn't save — check your connection";
+}
 
 const DEVICE_WIDTH: Record<"mobile" | "tablet" | "desktop", number> = { mobile: 380, tablet: 700, desktop: 1040 };
 
@@ -42,8 +51,16 @@ export default function InvitationBuilderPage() {
   const [linkOpen, setLinkOpen] = useState(false);
   const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("mobile");
   const [previewRef, previewHeight] = useScrollportHeight();
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+  const toast = useToast();
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [saveError, setSaveError] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  // What's in the database, as JSON — the config is "dirty" when it differs.
+  const savedJson = useRef<string | null>(null);
+  const configRef = useRef(config);
+  configRef.current = config;
+  const inFlight = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
     if (liveEvent) {
@@ -61,18 +78,72 @@ export default function InvitationBuilderPage() {
   useEffect(() => {
     if (event && !config) {
       setConfig(event.invitation);
+      savedJson.current = JSON.stringify(event.invitation);
       const first = [...event.invitation.sections].sort((a, b) => a.order - b.order)[0];
       setSelected(first?.type ?? null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event]);
 
+  // Saves the current config if it has unsaved changes. Resolves true once
+  // everything on screen is in the database.
+  const saveNow = useCallback(async (): Promise<boolean> => {
+    // Let a save that's already running finish first, then re-check.
+    if (inFlight.current) await inFlight.current;
+    const current = configRef.current;
+    if (!current) return true;
+    const json = JSON.stringify(current);
+    if (json === savedJson.current) return true;
+    const run = (async () => {
+      setSaveState("saving");
+      try {
+        await updateInvitation(eventId, current);
+        savedJson.current = json;
+        setSaveError("");
+        setSaveState(JSON.stringify(configRef.current) === json ? "saved" : "unsaved");
+        return true;
+      } catch (err) {
+        setSaveError(saveErrorMessage(err));
+        setSaveState("error");
+        return false;
+      }
+    })();
+    inFlight.current = run;
+    try {
+      return await run;
+    } finally {
+      inFlight.current = null;
+    }
+  }, [eventId, updateInvitation]);
+
+  // Autosave a moment after the last change.
+  useEffect(() => {
+    if (!config || savedJson.current === null) return;
+    if (JSON.stringify(config) === savedJson.current) return;
+    setSaveState((s) => (s === "saving" ? s : "unsaved"));
+    const timer = setTimeout(() => void saveNow(), AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [config, saveNow]);
+
+  // Closing the tab or reloading with unsaved changes: ask the browser to
+  // confirm. Leaving within the app (browser Back) flushes on unmount below.
+  const hasPending = saveState !== "saved";
+  useEffect(() => {
+    if (!hasPending) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasPending]);
+
+  const saveNowRef = useRef(saveNow);
+  saveNowRef.current = saveNow;
+  useEffect(() => () => void saveNowRef.current(), []);
+
   if (resolvedEvent === "loading" || !config) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: T.cream }}>
-        <p className="text-sm" style={{ color: T.muted }}>Loading invitation...</p>
-      </div>
-    );
+    return <PageLoader label="Loading invitation" />;
   }
 
   if (resolvedEvent === null || !event) {
@@ -100,33 +171,30 @@ export default function InvitationBuilderPage() {
     setConfig((c) => c && { ...c, sections: c.sections.map((s) => (s.type === type ? { ...s, content } : s)) });
   }
 
-  async function handleSave() {
-    if (!config) return;
-    setSaving(true);
-    setSaveMessage("");
-    try {
-      await updateInvitation(event!.id, config);
-      setSaveMessage("Saved");
-      setTimeout(() => setSaveMessage(""), 2000);
-    } catch (err) {
-      // The database rejects a gallery over the plan's photo limit, or a
-      // Premium gallery style / page layout / cover style on a lower plan,
-      // with a readable message (see gallery_photo_limit,
-      // gallery_style_is_premium and design_style_is_premium in
-      // schema.sql) — show it rather than the generic failure.
-      const message = (err as { message?: string } | null)?.message ?? "";
-      setSaveMessage(/gallery photos|Premium plan|Pro plan/.test(message) ? message : "Couldn't save — try again");
-    } finally {
-      setSaving(false);
+  async function handleBack() {
+    if (!(await saveNow())) {
+      setConfirmLeave(true);
+      return;
     }
+    navigate("/dashboard");
   }
 
   async function handlePublishToggle() {
     if (!event) return;
+    const publish = event.status !== "published";
+    setPublishing(true);
     try {
-      await updateEvent(event.id, { status: event.status === "published" ? "unpublished" : "published" });
+      // Publish what's on screen, not the last autosave.
+      if (publish && !(await saveNow())) {
+        toast("Couldn't publish — your latest changes aren't saved yet.", "error");
+        return;
+      }
+      await updateEvent(event.id, { status: publish ? "published" : "unpublished" });
+      toast(publish ? "Published — your invitation is live" : "Unpublished — the link is offline");
     } catch {
-      // best-effort — the dashboard's own publish control is the primary path
+      toast(publish ? "Couldn't publish. Please try again." : "Couldn't unpublish. Please try again.", "error");
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -153,7 +221,7 @@ export default function InvitationBuilderPage() {
         {/* Toolbar */}
         <header className="h-14 flex items-center justify-between px-4 flex-shrink-0" style={{ backgroundColor: T.white, borderBottom: `1px solid ${T.border}` }}>
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => navigate("/dashboard")} className="text-sm font-medium flex-shrink-0" style={{ color: T.muted }}>
+            <button onClick={handleBack} className="text-sm font-medium flex-shrink-0" style={{ color: T.muted }}>
               ← Back
             </button>
             <span className="text-sm font-semibold truncate" style={{ color: T.charcoal }}>{event.name}</span>
@@ -176,7 +244,7 @@ export default function InvitationBuilderPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {saveMessage && <span className="text-xs" style={{ color: T.muted }}>{saveMessage}</span>}
+            <SaveStatus state={saveState} error={saveError} />
             <button
               onClick={() => setLinkOpen(true)}
               className="hidden sm:block px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-stone-100"
@@ -188,25 +256,27 @@ export default function InvitationBuilderPage() {
               <button
                 onClick={() => setUpgradeOpen(true)}
                 className="px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
-                style={{ backgroundColor: "#C9A66B", color: T.white }}
+                style={{ backgroundColor: T.goldTint, color: T.gold }}
               >
                 Upgrade
               </button>
             )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-stone-100 disabled:opacity-60"
-              style={{ border: `1px solid ${T.border}`, color: T.charcoal }}
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
+            {saveState === "error" && (
+              <button
+                onClick={() => void saveNow()}
+                className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-stone-100"
+                style={{ border: `1px solid ${T.border}`, color: T.charcoal }}
+              >
+                Retry save
+              </button>
+            )}
             <button
               onClick={handlePublishToggle}
-              className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
+              disabled={publishing}
+              className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-90 disabled:opacity-60"
               style={{ backgroundColor: T.accent, color: T.white }}
             >
-              {isPublished ? "Unpublish" : "Publish"}
+              {publishing ? (isPublished ? "Unpublishing..." : "Publishing...") : isPublished ? "Unpublish" : "Publish"}
             </button>
           </div>
         </header>
@@ -309,6 +379,17 @@ export default function InvitationBuilderPage() {
           </div>
         )}
 
+        {confirmLeave && (
+          <ConfirmDialog
+            title="Leave without saving?"
+            body={`Your latest changes couldn't be saved (${saveError || "unknown error"}). If you leave now, they'll be lost.`}
+            confirmLabel="Leave anyway"
+            cancelLabel="Stay"
+            danger
+            onConfirm={() => navigate("/dashboard")}
+            onCancel={() => setConfirmLeave(false)}
+          />
+        )}
         {upgradeOpen && <UpgradeEventModal event={event} onClose={() => setUpgradeOpen(false)} />}
         {linkOpen && (
           <LinkModal
@@ -320,5 +401,19 @@ export default function InvitationBuilderPage() {
         )}
       </div>
     </EventPlanProvider>
+  );
+}
+
+function SaveStatus({ state, error }: { state: SaveState; error: string }) {
+  const label = { saved: "All changes saved", unsaved: "Unsaved changes", saving: "Saving...", error }[state];
+  return (
+    <span
+      role="status"
+      title={label}
+      className={`text-xs max-w-[9rem] sm:max-w-[16rem] truncate ${state === "error" ? "" : "hidden md:inline"}`}
+      style={{ color: state === "error" ? T.error : T.muted }}
+    >
+      {label}
+    </span>
   );
 }

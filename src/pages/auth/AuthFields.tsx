@@ -1,20 +1,12 @@
 import { useId, useState, type InputHTMLAttributes } from "react";
+import { T } from "../../lib/tokens";
 
 // Shared form pieces for the sign-in, sign-up and password pages: visible
 // labels (placeholders vanish while typing and aren't read reliably by
 // screen readers), autofill hints so phones and password managers can
 // fill or suggest, and a show/hide toggle for passwords.
 
-export const AUTH_T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  white: "#FFFFFF",
-  // 5.4:1 on white — readable at small sizes (the old #E55757 was 3.6:1).
-  error: "#B42318",
-};
+export const AUTH_T = T;
 
 const inputClass = "w-full px-4 py-3 rounded-xl text-sm outline-none";
 const inputStyle = { border: `1px solid ${AUTH_T.border}`, backgroundColor: AUTH_T.cream, color: AUTH_T.charcoal };

@@ -2,16 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import webAppLogo from "../assets/webApp-logo-mark.png";
 import { LEGAL_INFO } from "../data/legal";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-};
+import { T } from "../lib/tokens";
 
 // Company "About" page, linked from the landing footer. Describes only what
 // Invyta is and does today — no invented team, founding story or usage
@@ -57,7 +48,7 @@ export default function AboutPage() {
               },
               {
                 title: "How we price it",
-                body: "Every event starts free. If an event needs more — premium designs, unlimited guests, check-in, analytics — you upgrade just that event, once, with GCash, Maya or card. No subscription.",
+                body: "Every event starts free. If an event needs more — premium designs, unlimited guests, check-in, analytics — you upgrade just that event, once, via QR Ph (GCash, Maya or any bank app). No subscription.",
               },
             ].map((b) => (
               <div key={b.title}>

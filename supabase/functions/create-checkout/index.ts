@@ -9,7 +9,7 @@
 //
 // Env: PAYMONGO_SECRET_KEY, APP_URL (e.g. https://invyta.app — where
 // PayMongo sends the guest back), optional PAYMONGO_PAYMENT_METHODS
-// (comma-separated, default "gcash,paymaya,card"; only list methods
+// (comma-separated, default "qrph"; only list methods
 // activated on your PayMongo account). SUPABASE_URL / SUPABASE_ANON_KEY /
 // SUPABASE_SERVICE_ROLE_KEY are provided by Supabase automatically.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -22,7 +22,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PAYMONGO_SECRET_KEY = Deno.env.get("PAYMONGO_SECRET_KEY") ?? "";
 const APP_URL = (Deno.env.get("APP_URL") ?? "").replace(/\/$/, "");
-const PAYMENT_METHODS = (Deno.env.get("PAYMONGO_PAYMENT_METHODS") ?? "gcash,paymaya,card").split(",").map((m) => m.trim()).filter(Boolean);
+const PAYMENT_METHODS = (Deno.env.get("PAYMONGO_PAYMENT_METHODS") ?? "qrph").split(",").map((m) => m.trim()).filter(Boolean);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });

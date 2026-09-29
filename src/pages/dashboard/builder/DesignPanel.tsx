@@ -11,8 +11,7 @@ import { planAllows } from "../../../data/plan-limits";
 import { useEventPlan } from "../../../lib/event-plan-context";
 import { SECTION_LABELS } from "../../../components/invitation/SectionList";
 import type { ButtonStyle, EventCategory, InvitationConfig, InvitationSectionType, InvitationTheme, PageLayout } from "../../../types/models";
-
-const T = { charcoal: "#1C2942", border: "#E7E1D8", muted: "#78716C", accent: "#1C2942", white: "#FFFFFF", cream: "#FAF8F5", surface: "#F5F0E8" };
+import { T } from "../../../lib/tokens";
 
 const BUTTON_STYLES: { id: ButtonStyle; label: string }[] = [
   { id: "rounded", label: "Rounded" },
@@ -411,7 +410,7 @@ function MusicField({ config, onChange, eventId }: { config: InvitationConfig; o
           <p className="text-[11px] mt-2" style={{ color: T.muted }}>
             Starts when a guest opens the invitation, with a button to pause. Use music you have the rights to share.
           </p>
-          {error && <p className="text-xs mt-1.5" style={{ color: "#E55757" }}>{error}</p>}
+          {error && <p className="text-xs mt-1.5" style={{ color: T.red }}>{error}</p>}
           <input ref={inputRef} type="file" accept=".mp3,.m4a,.aac,.ogg,audio/mpeg,audio/mp4,audio/aac,audio/ogg" onChange={(e) => handleFile(e.target.files?.[0])} className="hidden" />
         </>
       )}
