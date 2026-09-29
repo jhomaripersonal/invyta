@@ -3,17 +3,8 @@ import type { EventRecord } from "../../lib/events-store";
 import { startEventUpgrade } from "../../lib/payments";
 import { PLAN_FEATURES, formatPeso, upgradePriceCentavos, type PaidPlan } from "../../data/pricing";
 import { planAllows, planLabel } from "../../data/plan-limits";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-  red: "#E55757",
-};
+import { T } from "../../lib/tokens";
+import { useDialog } from "../../components/useDialog";
 
 const PLAN_RANK = { free: 0, premium: 1, pro: 2, event_planner: 3 } as const;
 
@@ -22,6 +13,7 @@ const PLAN_RANK = { free: 0, premium: 1, pro: 2, event_planner: 3 } as const;
 // hands off to PayMongo's hosted checkout. The refund terms are stated
 // here, before paying, as the compliance addendum requires.
 export default function UpgradeEventModal({ event, onClose }: { event: EventRecord; onClose: () => void }) {
+  const dialog = useDialog(onClose);
   const options = (["premium", "pro"] as PaidPlan[]).filter((p) => PLAN_RANK[event.ownerPlan] < PLAN_RANK[p]);
   const [choice, setChoice] = useState<PaidPlan>(options.includes("premium") ? "premium" : "pro");
   const [submitting, setSubmitting] = useState(false);
@@ -41,9 +33,9 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" style={{ backgroundColor: "rgba(28, 41, 66,0.45)" }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl p-6 max-h-[92vh] overflow-y-auto" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
+      <div {...dialog.props} className="outline-none w-full max-w-lg rounded-2xl p-6 max-h-[92vh] overflow-y-auto" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 mb-1">
-          <h2 className="text-lg font-bold" style={{ color: T.charcoal }}>Upgrade this event</h2>
+          <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>Upgrade this event</h2>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100" style={{ color: T.muted }} aria-label="Close">✕</button>
         </div>
         <p className="text-sm mb-5" style={{ color: T.muted }}>
@@ -96,10 +88,10 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
               className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
               style={{ backgroundColor: T.accent, color: T.white }}
             >
-              {submitting ? "Opening secure checkout..." : `Pay ${formatPeso(upgradePriceCentavos(event.plan, choice))} with GCash, Maya or card`}
+              {submitting ? "Opening secure checkout..." : `Pay ${formatPeso(upgradePriceCentavos(event.plan, choice))} with QR Ph`}
             </button>
             <p className="text-[11px] leading-relaxed mt-3" style={{ color: T.muted }}>
-              Secure checkout by PayMongo — Invyta never sees your card details. Refundable within 24 hours if this invitation hasn't been
+              Secure checkout by PayMongo — scan the QR with GCash, Maya or any bank app. Refundable within 24 hours if this invitation hasn't been
               published or sent to guests; non-refundable after that, except where the law requires otherwise. See our{" "}
               <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">Terms</a>.
             </p>

@@ -20,6 +20,7 @@ import { coverStyle } from "../../data/page-layouts";
 import { sectionStyle } from "../../data/section-styles";
 import { categoryLabel, eventDateTime, formatLongDate, formatTime } from "./format";
 import type { InvitationSectionType } from "../../types/models";
+import { VIDEO_PLAY_EVENT } from "./media-events";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -66,7 +67,10 @@ export function sectionHasContent(type: InvitationSectionType, content: Record<s
     case "video":
       return planAllows(event.ownerPlan, "video") && videosFor(content).length > 0;
     case "entourage":
-      return list<{ role?: string; names?: string }>(content, "groups").some((g) => g.role || g.names);
+      // Delegates to the entourage normalizer, so both the legacy flat
+      // shape and the richer headed/columned shape count as "has content"
+      // only when there's actually a heading or at least one name.
+      return normalizeEntourageGroups(list<EntourageGroup>(content, "groups")).length > 0;
     case "gift_registry":
       return !!str(content, "message") || list<{ url?: string }>(content, "links").some((l) => l.url);
     case "faq":
@@ -1108,7 +1112,15 @@ function VideoPlayer({ embed, title, poster, theme }: { embed: VideoEmbed; title
             referrerPolicy="strict-origin-when-cross-origin"
           />
         ) : (
-          <button type="button" onClick={() => setPlaying(true)} className="group absolute inset-0 w-full h-full" aria-label={label}>
+          <button
+            type="button"
+            onClick={() => {
+              setPlaying(true);
+              window.dispatchEvent(new Event(VIDEO_PLAY_EVENT));
+            }}
+            className="group absolute inset-0 w-full h-full"
+            aria-label={label}
+          >
             <img
               src={embed.thumbnailUrl ?? poster}
               alt=""
@@ -1178,21 +1190,170 @@ export function DressCodeSection({ content, theme, index }: SectionProps) {
 }
 
 // ─── Entourage ──────────────────────────────────────────────────────────
+// Two stored shapes are supported. The original was a flat list of
+// `{ role, names }` pairs. The richer shape adds an optional group
+// `heading` (e.g. "TO STAND AS PRINCIPAL WITNESSES TO OUR VOWS") and one
+// or two `columns`, each with its own optional `label` and `names` — the
+// model the Builder writes for an entourage laid out like a printed
+// wedding program, with paired columns (Groomsmen / Bridesmaids) and
+// centered sub-labels (Bestman, Maid of Honor).
+//
+// Both shapes normalize to the same intermediate before rendering, so
+// events created before the richer model keep working unchanged.
+
+export interface EntourageColumn {
+  // Small centered or per-column label, e.g. "Groomsmen" / "Bridesmaids".
+  label?: string;
+  // Free text. Split on newlines *and* commas before rendering, so a host
+  // who pressed Enter between names and one who typed "Juan Cruz, Maria
+  // Cruz" get the same tidy list.
+  names?: string;
+}
+
+export interface EntourageGroup {
+  // Centered uppercase heading, e.g. "TO GUIDE US ON OUR WAY AHEAD".
+  heading?: string;
+  // "columns" puts the two columns side by side (Groomsmen | Bridesmaids).
+  // "stacked" centers each column vertically (Bestman, then Maid of Honor).
+  // Defaults to "columns". Ignored when there's only one column.
+  layout?: "columns" | "stacked";
+  // One or two columns. Length 0 means the group is just a heading.
+  columns?: EntourageColumn[];
+  // Legacy fields (flat shape): a labeled column with a name list. Still
+  // written by older events; normalized into `columns` at render time.
+  role?: string;
+  names?: string;
+}
+
+interface NormalizedEntourageColumn {
+  label: string;
+  names: string[];
+}
+
+interface NormalizedEntourageGroup {
+  heading: string;
+  layout: "columns" | "stacked";
+  columns: NormalizedEntourageColumn[];
+}
+
+export function entourageNames(names: string): string[] {
+  return names
+    .split(/\r?\n|,/)
+    .map((n) => n.trim())
+    .filter(Boolean);
+}
+
+export function normalizeEntourageGroups(raw: EntourageGroup[]): NormalizedEntourageGroup[] {
+  const out: NormalizedEntourageGroup[] = [];
+  for (const g of raw) {
+    const isRich = g.heading != null || g.columns != null || g.layout != null;
+    if (isRich) {
+      const columns = (g.columns ?? [])
+        .map((c) => ({ label: (c.label ?? "").trim(), names: entourageNames(c.names ?? "") }))
+        .filter((c) => c.label || c.names.length > 0);
+      const heading = (g.heading ?? "").trim();
+      if (!heading && columns.length === 0) continue;
+      out.push({ heading, layout: g.layout ?? "columns", columns });
+    } else {
+      const label = (g.role ?? "").trim();
+      const names = entourageNames(g.names ?? "");
+      if (!label && names.length === 0) continue;
+      out.push({ heading: "", layout: "columns", columns: [{ label, names }] });
+    }
+  }
+  return out;
+}
+
 export function EntourageSection({ content, theme, index }: SectionProps) {
-  const groups = list<{ role?: string; names?: string }>(content, "groups").filter((g) => g.role || g.names);
+  const groups = normalizeEntourageGroups(list<EntourageGroup>(content, "groups"));
   if (groups.length === 0) return null;
+
+  const heading = str(content, "heading", "The entourage");
+  // Font overrides — set from the Builder's font picker. `font` applies to
+  // the whole section; `headingFont` / `namesFont` override it for their
+  // role. All optional; anything unset falls through to the theme fonts.
+  const sectionFont = str(content, "font");
+  const headingFont = str(content, "headingFont") || sectionFont || theme.fonts.headingFont;
+  const namesFont = str(content, "namesFont") || sectionFont || theme.fonts.bodyFont;
+
   return (
-    <div className={`px-6 py-10 ${alignClass(theme)}`}>
-      <Eyebrow label="Entourage" index={index} theme={theme} />
-      <SectionHeading theme={theme}>The <Accent theme={theme}>entourage</Accent></SectionHeading>
-      <div>
+    <div className="px-6 py-10">
+      <div className={alignClass(theme)}>
+        <Eyebrow label="Entourage" index={index} theme={theme} />
+        <h3
+          className={isEditorial(theme) ? "text-[34px] leading-[1.1] text-left mb-6" : "text-[26px] leading-tight text-center mb-5"}
+          style={{ fontFamily: headingFont, color: theme.palette.text }}
+        >
+          {heading}
+        </h3>
+      </div>
+      <div className="space-y-9">
         {groups.map((g, i) => (
-          <div key={i} className="py-3.5" style={i > 0 ? { borderTop: divider(theme) } : undefined}>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.15em]" style={{ color: theme.palette.primary }}>{g.role}</div>
-            <div className="text-sm mt-1" style={{ color: theme.palette.text }}>{g.names}</div>
-          </div>
+          <EntourageGroupBlock key={i} group={g} theme={theme} headingFont={headingFont} namesFont={namesFont} />
         ))}
       </div>
+    </div>
+  );
+}
+
+// One group: an optional centered heading ("TO GUIDE US ON OUR WAY AHEAD")
+// with a hairline under it, then one or two columns. Each column may have
+// its own small label ("Groomsmen") above its name list. Two columns sit
+// side by side in "columns" mode; in "stacked" mode (or with one column)
+// they stack, centered.
+function EntourageGroupBlock({
+  group, theme, headingFont, namesFont,
+}: {
+  group: NormalizedEntourageGroup;
+  theme: ResolvedTheme;
+  headingFont: string;
+  namesFont: string;
+}) {
+  const { heading, layout, columns } = group;
+  const sideBySide = layout === "columns" && columns.length === 2;
+
+  return (
+    <div>
+      {heading && (
+        <div className="mb-4 text-center">
+          <div
+            className="text-[12px] font-semibold italic uppercase tracking-[0.16em]"
+            style={{ fontFamily: headingFont, color: theme.palette.primary }}
+          >
+            {heading}
+          </div>
+          <div className="mx-auto mt-2 w-10 h-px" style={{ backgroundColor: theme.palette.primary, opacity: 0.4 }} />
+        </div>
+      )}
+      {columns.length > 0 && (
+        <div className={sideBySide ? "grid grid-cols-2 gap-x-6 gap-y-4" : "flex flex-col items-center gap-5"}>
+          {columns.map((c, i) => (
+            <div key={i} className="text-center">
+              {c.label && (
+                <div
+                  className="text-[11px] italic mb-1.5"
+                  style={{ fontFamily: headingFont, color: theme.palette.text, opacity: 0.7 }}
+                >
+                  {c.label}
+                </div>
+              )}
+              {c.names.length > 0 && (
+                <ul className="space-y-1">
+                  {c.names.map((n, j) => (
+                    <li
+                      key={j}
+                      className="text-[12px] uppercase tracking-[0.08em] leading-[1.7]"
+                      style={{ fontFamily: namesFont, color: theme.palette.text }}
+                    >
+                      {n}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1562,7 +1723,7 @@ export function RsvpSection({ content, event, theme, interactive = true, onEvent
         aria-hidden="true"
         style={{ position: "absolute", left: "-10000px", width: 1, height: 1, opacity: 0 }}
       />
-      {error && <p className="text-xs" style={{ color: "#E55757" }}>{error}</p>}
+      {error && <p className="text-xs" style={{ color: "#B42318" }}>{error}</p>}
       <button type="submit" disabled={submitting} className={`w-full py-3.5 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60 ${radius}`} style={buttonStyleProps(theme.buttonStyle, theme.palette)}>
         {submitting ? "Submitting..." : "Confirm RSVP"}
       </button>

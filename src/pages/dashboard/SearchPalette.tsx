@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { EventRecord } from "../../lib/events-store";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-};
+import { T } from "../../lib/tokens";
 
 export interface SearchPage {
   id: string;

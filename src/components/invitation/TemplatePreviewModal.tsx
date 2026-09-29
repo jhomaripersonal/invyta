@@ -3,15 +3,8 @@ import { motion } from "framer-motion";
 import { SectionList } from "./SectionList";
 import { useScrollportHeight } from "./useScrollportHeight";
 import { TEMPLATE_PREVIEWS } from "../../data/landing-template-previews";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-};
+import { T } from "../../lib/tokens";
+import { useDialog } from "../useDialog";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -29,6 +22,7 @@ const PREVIEW_DEVICE_WIDTH: Record<PreviewDevice, number> = { mobile: 380, table
 // Shared by the landing page and the dashboard's Templates view, which
 // each supply their own footer action.
 export default function TemplatePreviewModal({ templateName, ctaLabel, onCta, onClose }: { templateName: string; ctaLabel: string; onCta: () => void; onClose: () => void }) {
+  const dialog = useDialog(onClose);
   const seed = TEMPLATE_PREVIEWS[templateName];
   const [device, setDevice] = useState<PreviewDevice>("mobile");
   const [scrollRef, screenHeight] = useScrollportHeight();
@@ -43,7 +37,8 @@ export default function TemplatePreviewModal({ templateName, ctaLabel, onCta, on
       transition={{ duration: 0.2 }}
     >
       <motion.div
-        className="w-full rounded-2xl overflow-hidden shadow-2xl flex flex-col transition-[width] duration-200"
+        {...dialog.props}
+        className="w-full rounded-2xl overflow-hidden shadow-2xl outline-none flex flex-col transition-[width] duration-200"
         style={{ backgroundColor: T.white, maxHeight: "88vh", width: PREVIEW_DEVICE_WIDTH[device], maxWidth: "94vw" }}
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -51,7 +46,7 @@ export default function TemplatePreviewModal({ templateName, ctaLabel, onCta, on
         transition={{ duration: 0.25, ease: EASE }}
       >
         <div className="flex items-center justify-between gap-3 px-4 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <span className="text-sm font-semibold truncate">{seed.templateName}</span>
+          <h2 id={dialog.titleId} className="text-sm font-semibold truncate">{seed.templateName}</h2>
           <div className="flex items-center gap-1 p-1 rounded-lg flex-shrink-0" style={{ backgroundColor: T.surface }}>
             {(["mobile", "tablet", "desktop"] as const).map((d) => (
               <button

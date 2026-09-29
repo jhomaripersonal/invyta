@@ -3,8 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import webAppLogo from "../assets/webApp-logo-mark.png";
 import { useAuth } from "../lib/auth-context";
 import { SUPPORT_CATEGORIES, submitSupportRequest, type SupportCategory } from "../lib/support";
-
-const T = { accent: "#1C2942", charcoal: "#1C2942", cream: "#FAF8F5", border: "#E7E1D8", muted: "#78716C", white: "#FFFFFF", red: "#E55757", green: "#4CAF7D" };
+import { T } from "../lib/tokens";
 
 const inputClass = "w-full px-4 py-3 rounded-xl text-sm outline-none";
 const inputStyle = { border: `1px solid ${T.border}`, backgroundColor: T.cream, color: T.charcoal };

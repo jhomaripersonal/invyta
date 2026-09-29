@@ -2,17 +2,8 @@ import { useState } from "react";
 import type { EventRecord } from "../../lib/events-store";
 import type { GuestRecord } from "../../lib/guests-store";
 import { DEFAULT_REMINDER_TEMPLATE, reminderLinks, reminderMessage, type ReminderChannel } from "../../lib/reminders";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  white: "#FFFFFF",
-  green: "#2E7D55",
-  gold: "#B08D57",
-};
+import { T } from "../../lib/tokens";
+import { useDialog } from "../../components/useDialog";
 
 const CHANNEL_LABELS: Record<ReminderChannel, string> = {
   messenger: "Messenger",
@@ -60,6 +51,7 @@ interface Props {
 // one-tap buttons for the apps the host already uses. Tapping one records
 // the reminder, so the host can see who's already been nudged.
 export default function RemindGuestsModal({ event, guests, personalLinks, deadline, onReminded, onClose }: Props) {
+  const dialog = useDialog(onClose);
   const [template, setTemplate] = useState(loadTemplate);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [remindedNow, setRemindedNow] = useState<Record<string, string>>({});
@@ -99,10 +91,10 @@ export default function RemindGuestsModal({ event, guests, personalLinks, deadli
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(28, 41, 66,0.45)" }} onClick={onClose}>
-      <div className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Remind pending guests">
+      <div {...dialog.props} className="outline-none w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 p-6 pb-4">
           <div>
-            <h2 className="text-lg font-bold" style={{ color: T.charcoal }}>Remind pending guests</h2>
+            <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>Remind pending guests</h2>
             <p className="text-xs mt-1" style={{ color: T.muted }}>
               {guests.length} {guests.length === 1 ? "guest hasn't" : "guests haven't"} replied. Tap an app to send a reminder from your own account.
             </p>

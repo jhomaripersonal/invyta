@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import type { EventRecord } from "../../../lib/events-store";
 import { invitationUrl, isSlugAvailable, normalizeSlugInput, setEventSlug, slugProblem } from "../../../lib/custom-links";
 import { planAllows, requiredPlanLabel } from "../../../data/plan-limits";
-
-const T = { accent: "#1C2942", charcoal: "#1C2942", cream: "#FAF8F5", border: "#E7E1D8", muted: "#78716C", white: "#FFFFFF", green: "#2E7D55", red: "#C24141" };
+import { T } from "../../../lib/tokens";
+import { useDialog } from "../../../components/useDialog";
 
 type Availability = "idle" | "checking" | "available" | "taken";
 
@@ -16,6 +16,7 @@ export default function LinkModal({ event, onSaved, onUpgrade, onClose }: {
   onUpgrade: () => void;
   onClose: () => void;
 }) {
+  const dialog = useDialog(onClose);
   const canCustomize = planAllows(event.ownerPlan, "custom_url");
   const [slug, setSlug] = useState(event.slug);
   const [availability, setAvailability] = useState<Availability>("idle");
@@ -66,9 +67,9 @@ export default function LinkModal({ event, onSaved, onUpgrade, onClose }: {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" style={{ backgroundColor: "rgba(28, 41, 66,0.45)" }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
+      <div {...dialog.props} className="outline-none w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 mb-4">
-          <h2 className="text-lg font-bold" style={{ color: T.charcoal }}>Invitation link</h2>
+          <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>Invitation link</h2>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100" style={{ color: T.muted }} aria-label="Close">✕</button>
         </div>
 

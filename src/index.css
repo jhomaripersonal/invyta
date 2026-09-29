@@ -23,13 +23,15 @@
   --radius: 0.75rem;
 }
 
+/* Thin, quiet scrollbars — but always visible, so a panel that scrolls
+   (the builder's side panels, long modals) looks like it does. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-color: #E7E1D8 transparent;
 }
 
 *:hover {
-  scrollbar-color: #E7E1D8 transparent;
+  scrollbar-color: #CFC6B8 transparent;
 }
 
 html {
@@ -108,6 +110,20 @@ a:focus-visible {
   }
   .invyta-marquee {
     animation: none;
+  }
+}
+
+/* Actions over a card (e.g. a template's Preview / Use buttons): always
+   visible on touch screens, where there's no hover to reveal them; on
+   pointer devices they appear on hover or when tabbed into. */
+@media (hover: hover) {
+  .hover-reveal {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .group:hover .hover-reveal,
+  .group:focus-within .hover-reveal {
+    opacity: 1;
   }
 }
 

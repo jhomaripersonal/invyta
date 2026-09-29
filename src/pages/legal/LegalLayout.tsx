@@ -2,15 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import webAppLogo from "../../assets/webApp-logo-mark.png";
 import { LEGAL_INFO } from "../../data/legal";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  white: "#FFFFFF",
-};
+import { T } from "../../lib/tokens";
 
 // Shared shell for the Privacy Policy and Terms pages: plain, readable
 // long-form text with a header back to the site.

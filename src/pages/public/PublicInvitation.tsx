@@ -2,19 +2,23 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { resolveEventSlug } from "../../lib/custom-links";
 import { useEvents, type EventRecord } from "../../lib/events-store";
+import { useGuests } from "../../lib/guests-store";
 import { SectionList } from "../../components/invitation/SectionList";
 import { EnvelopeIntro } from "../../components/invitation/EnvelopeIntro";
 import { resolveTheme } from "../../components/invitation/theme";
 import MusicPlayer from "../../components/invitation/MusicPlayer";
 import { planAllows } from "../../data/plan-limits";
-
-const T = { cream: "#FAF8F5", charcoal: "#1C2942", muted: "#78716C" };
+import { T } from "../../lib/tokens";
+import PageLoader from "../../components/PageLoader";
 
 export default function PublicInvitationPage() {
   const { slug, guestId } = useParams<{ slug: string; guestId?: string }>();
   const { getEventBySlug } = useEvents();
   const navigate = useNavigate();
   const [event, setEvent] = useState<EventRecord | null | "loading">("loading");
+  const { getGuestPublic } = useGuests();
+  // A personal link addresses the envelope to its guest.
+  const [guestName, setGuestName] = useState<string | undefined>();
 
   useEffect(() => {
     if (!slug) return;
@@ -62,7 +66,20 @@ export default function PublicInvitationPage() {
     };
   }, [pageTitle, themeColor]);
 
-  if (event === "loading") return null;
+  const canPersonalize = loaded ? planAllows(loaded.ownerPlan, "personalized_links") : false;
+  useEffect(() => {
+    if (!guestId || !canPersonalize) return;
+    let cancelled = false;
+    getGuestPublic(guestId).then((guest) => {
+      if (!cancelled && guest) setGuestName(guest.name);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guestId, canPersonalize]);
+
+  if (event === "loading") return <PageLoader label="Opening invitation" />;
 
   if (!event) {
     // RLS only exposes published events to anonymous visitors, so a draft
@@ -84,7 +101,7 @@ export default function PublicInvitationPage() {
       <div>
         {/* Always mounted underneath the gate, so opening the envelope
             reveals the real page instantly instead of loading it in. */}
-        <EnvelopeIntro event={event} theme={theme} />
+        <EnvelopeIntro event={event} theme={theme} guestName={guestName} />
         <SectionList
           invitation={event.invitation}
           event={event}

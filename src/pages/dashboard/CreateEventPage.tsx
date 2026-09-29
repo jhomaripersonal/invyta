@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import CreateEventWizard from "./CreateEventWizard";
-
-const T = { accent: "#1C2942", cream: "#FAF8F5", border: "#E7E1D8" };
+import { T } from "../../lib/tokens";
 
 export default function CreateEventPage() {
   return (

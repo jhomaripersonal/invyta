@@ -3,8 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import webAppLogo from "../assets/webApp-logo-mark.png";
 import { confirmPayment, type PaymentStatus } from "../lib/payments";
 import { useEvents } from "../lib/events-store";
-
-const T = { accent: "#1C2942", charcoal: "#1C2942", cream: "#FAF8F5", border: "#E7E1D8", muted: "#78716C", white: "#FFFFFF", green: "#4CAF7D" };
+import { T } from "../lib/tokens";
 
 // PayMongo sends the organizer back here after checkout (?payment=<id>,
 // plus &cancelled=1 from the cancel button). The URL alone proves

@@ -1,5 +1,5 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import webAppLogo from "../assets/webApp-logo-mark.png";
 import { useAuth } from "../lib/auth-context";
 import { useEvents, type EventRecord } from "../lib/events-store";
@@ -23,24 +23,15 @@ import { listPayments, paymentMethodLabel } from "../lib/payments";
 import { PLAN_FEATURES, formatPeso, upgradePriceCentavos } from "../data/pricing";
 import type { Payment } from "../types/models";
 import UpgradeNotice from "../components/UpgradeNotice";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useToast } from "../components/Toast";
 import TemplatePreviewModal from "../components/invitation/TemplatePreviewModal";
 import { accountPlan, guestLimit, planAllows, planLabel, requiredPlanLabel, type PlanFeature } from "../data/plan-limits";
+import { T } from "../lib/tokens";
 
 type NavTarget = "landing" | "dashboard" | "login";
-type View = "home" | "events" | "templates" | "analytics" | "billing" | "guests" | "checkin" | "settings";
-
-// ─── Design tokens ────────────────────────────────────────────────────────
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  surface: "#F5F0E8",
-  white: "#FFFFFF",
-  green: "#4CAF7D",
-  red: "#E55757",
-};
+const VIEWS = ["home", "events", "templates", "analytics", "billing", "guests", "checkin", "settings"] as const;
+type View = (typeof VIEWS)[number];
 
 // ─── SVG Icon set ─────────────────────────────────────────────────────────
 function Icon({ name, size = 18, color = "currentColor" }: { name: string; size?: number; color?: string }) {
@@ -63,6 +54,9 @@ function Icon({ name, size = 18, color = "currentColor" }: { name: string; size?
     x: <path d="M4 4l10 10M14 4L4 14"/>,
     arrowUp: <path d="M9 15V3M4 8l5-5 5 5"/>,
     home: <><path d="M2 9L9 3l7 6v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9z"/><path d="M6 17V9h6v8"/></>,
+    lock: <><rect x="3.5" y="8" width="11" height="8" rx="1.5"/><path d="M6 8V5.5a3 3 0 0 1 6 0V8"/></>,
+    more: <><circle cx="4" cy="9" r="0.9" fill={color}/><circle cx="9" cy="9" r="0.9" fill={color}/><circle cx="14" cy="9" r="0.9" fill={color}/></>,
+    link: <><path d="M7.5 10.5a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2L9 4.8"/><path d="M10.5 7.5a3 3 0 0 0-4.2 0L3.7 10.1a3 3 0 0 0 4.2 4.2L9 13.2"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -72,14 +66,94 @@ function Icon({ name, size = 18, color = "currentColor" }: { name: string; size?
 }
 
 // ─── Status badge ─────────────────────────────────────────────────────────
-function Badge({ label, variant }: { label: string; variant: "green" | "gold" | "muted" | "red" }) {
-  const color = { green: T.green, gold: T.accent, muted: T.muted, red: T.red }[variant];
+type BadgeVariant = "green" | "amber" | "muted" | "red";
+
+function Badge({ label, variant }: { label: string; variant: BadgeVariant }) {
+  const color = { green: T.green, amber: T.amber, muted: T.muted, red: T.red }[variant];
   return (
     <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color }}>
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
       {label}
     </span>
   );
+}
+
+// ─── Row menu ─────────────────────────────────────────────────────────────
+// A "⋯" button with a small dropdown of actions — the full set of a row's
+// actions on phones, and the less-used ones on wider screens.
+type MenuItem = { label: string; onClick: () => void; tone?: "danger" | "muted" };
+
+function RowMenu({ items, label, className = "" }: { items: (MenuItem | false | null | undefined)[]; label: string; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = items.filter(Boolean) as MenuItem[];
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  if (visible.length === 0) return null;
+  return (
+    <div ref={ref} className={`relative flex-shrink-0 ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors hover:bg-stone-100"
+        style={{ border: `1px solid ${T.border}`, backgroundColor: open ? T.surface : T.white }}
+      >
+        <Icon name="more" size={16} color={T.charcoal} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1.5 z-30 min-w-[200px] py-1.5 rounded-xl"
+          style={{ backgroundColor: T.white, border: `1px solid ${T.border}`, boxShadow: "0 8px 24px rgba(28,41,66,0.12)" }}
+        >
+          {visible.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                item.onClick();
+              }}
+              className="w-full text-left px-3.5 py-2.5 text-sm transition-colors hover:bg-stone-50"
+              style={{ color: item.tone === "danger" ? "#B42318" : item.tone === "muted" ? T.muted : T.charcoal }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Copies text, confirming with a toast; where the clipboard is blocked,
+// falls back to a prompt the user can copy from.
+async function copyWithToast(text: string, toast: ReturnType<typeof useToast>, done: string, fallbackPrompt: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(done);
+  } catch {
+    window.prompt(fallbackPrompt, text);
+  }
 }
 
 // ─── Stat card ────────────────────────────────────────────────────────────
@@ -108,18 +182,43 @@ function formatEventDate(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// Today as YYYY-MM-DD in the organizer's own timezone (toISOString is UTC,
+// which in the Philippines still says "yesterday" until 8 a.m.).
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// An event without a date yet counts as upcoming — it hasn't happened.
+function isUpcoming(e: EventRecord, today: string): boolean {
+  return !e.date || e.date >= today;
+}
+
+// Soonest first; undated events last.
+function bySoonest(a: EventRecord, b: EventRecord): number {
+  if (!a.date || !b.date) return a.date ? -1 : b.date ? 1 : 0;
+  return a.date.localeCompare(b.date);
+}
+
 function categoryLabel(category: EventRecord["category"]): string {
   return EVENT_CATEGORIES.find((c) => c.id === category)?.label ?? category;
 }
 
 // ─── Main layout ──────────────────────────────────────────────────────────
 export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) {
-  const [view, setView] = useState<View>("home");
+  // Each view has its own URL (/dashboard/guests …), so a refresh stays put,
+  // the browser's Back button goes to the previous view, and views can be
+  // linked to directly.
+  const { view: viewParam } = useParams<{ view?: string }>();
+  const view: View = (VIEWS as readonly string[]).includes(viewParam ?? "") ? (viewParam as View) : "home";
+  const unknownView = viewParam !== undefined && view === "home";
+  const mainRef = useRef<HTMLElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { user, logout } = useAuth();
   const { events, isLoading: eventsLoading } = useEvents();
   const navigate = useNavigate();
+  const setView = (v: View) => navigate(v === "home" ? "/dashboard" : `/dashboard/${v}`);
   const displayName = user?.name ?? "";
   const initials = displayName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
   const goToBilling = () => setView("billing");
@@ -139,6 +238,11 @@ export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) 
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Start each view at the top rather than at the last view's scroll offset.
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [view]);
+
   function handleLogout() {
     // Don't also navigate() here — ProtectedRoute already redirects to
     // /login the instant user becomes null, and racing an explicit
@@ -155,6 +259,8 @@ export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) 
     { id: "analytics", label: "Analytics", icon: "chart", feature: "analytics" },
     { id: "billing", label: "Billing", icon: "credit" },
   ];
+
+  if (unknownView) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: T.cream, fontFamily: "var(--font-sans)" }}>
@@ -256,7 +362,7 @@ export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) 
         {/* Topbar */}
         <header className="h-16 flex items-center justify-between px-5 md:px-7 flex-shrink-0" style={{ backgroundColor: T.white, borderBottom: `1px solid ${T.border}` }}>
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-stone-100 transition-colors">
+            <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" aria-expanded={sidebarOpen} className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-stone-100 transition-colors">
               <Icon name="menu" size={18} />
             </button>
             {/* Breadcrumb */}
@@ -291,7 +397,7 @@ export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) 
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto">
           <div className="px-5 md:px-8 py-7">
             {view === "home" && <HomeView setView={setView} firstName={displayName.split(" ")[0] || "there"} events={events} isLoading={eventsLoading} />}
             {view === "events" && <EventsView />}
@@ -338,6 +444,9 @@ function HomeView({ setView, firstName, events, isLoading }: { setView: (v: View
   const totalGuests = events.reduce((sum, e) => sum + e.guestCount, 0);
   const confirmed = events.reduce((sum, e) => sum + e.confirmedGuestCount, 0);
   const pending = events.reduce((sum, e) => sum + e.pendingGuestCount, 0);
+  const today = todayIso();
+  const upcoming = events.filter((e) => isUpcoming(e, today)).sort(bySoonest);
+  const HOME_LIST_LIMIT = 5;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -349,19 +458,22 @@ function HomeView({ setView, firstName, events, isLoading }: { setView: (v: View
           </h1>
           <p className="text-sm" style={{ color: T.muted }}>Here's what's happening with your events today.</p>
         </div>
-        <button
-          onClick={() => navigate("/dashboard/events/new")}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 flex-shrink-0"
-          style={{ backgroundColor: T.accent, color: T.white }}
-        >
-          <Icon name="plus" size={15} color={T.white} />
-          Create Event
-        </button>
+        {/* With no events yet, the empty state below carries this button. */}
+        {events.length > 0 && (
+          <button
+            onClick={() => navigate("/dashboard/events/new")}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 flex-shrink-0 self-start sm:self-auto"
+            style={{ backgroundColor: T.accent, color: T.white }}
+          >
+            <Icon name="plus" size={15} color={T.white} />
+            Create Event
+          </button>
+        )}
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Active Events" value={String(events.length)} />
+        <StatCard label="Upcoming Events" value={String(upcoming.length)} />
         <StatCard label="Total Guests" value={String(totalGuests)} />
         <StatCard label="Confirmed RSVPs" value={String(confirmed)} accent="green" />
         <StatCard label="Pending RSVPs" value={String(pending)} />
@@ -394,16 +506,20 @@ function HomeView({ setView, firstName, events, isLoading }: { setView: (v: View
       {/* Upcoming events */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold">Upcoming Events</h2>
-        <button onClick={() => setView("events")} className="text-sm font-medium flex items-center gap-1" style={{ color: T.accent }}>
-          View all <Icon name="chevronRight" size={13} color={T.accent} />
-        </button>
+        {events.length > 0 && (
+          <button onClick={() => setView("events")} className="text-sm font-medium flex items-center gap-1" style={{ color: T.accent }}>
+            View all {events.length} <Icon name="chevronRight" size={13} color={T.accent} />
+          </button>
+        )}
       </div>
       {isLoading ? (
-        <p className="text-sm text-center py-10" style={{ color: T.muted }}>Loading your events...</p>
+        <ListSkeleton rows={3} />
       ) : events.length === 0 ? (
         <EmptyEventsState />
+      ) : upcoming.length === 0 ? (
+        <EmptyNote icon="calendar" title="No upcoming events" body="Your past events are under Events → Past Events." />
       ) : (
-        <EventList events={events} />
+        <EventList events={upcoming.slice(0, HOME_LIST_LIMIT)} />
       )}
     </div>
   );
@@ -412,7 +528,7 @@ function HomeView({ setView, firstName, events, isLoading }: { setView: (v: View
 // ─── Event list ───────────────────────────────────────────────────────────
 function EventList({ events }: { events: EventRecord[] }) {
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: T.white, border: `1px solid ${T.border}` }}>
+    <div className="rounded-2xl" style={{ backgroundColor: T.white, border: `1px solid ${T.border}` }}>
       {events.map((e, i) => (
         <EventRow key={e.id} event={e} isLast={i === events.length - 1} />
       ))}
@@ -441,98 +557,149 @@ function EmptyEventsState() {
   );
 }
 
+// A quieter empty state for "nothing matches" (as opposed to "no events at
+// all", which gets the Create button above).
+function EmptyNote({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-center text-center py-14 px-6 rounded-2xl" style={{ backgroundColor: T.white, border: `1px dashed ${T.border}` }}>
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: T.surface }}>
+        <Icon name={icon} size={20} color={T.accent} />
+      </div>
+      <h3 className="font-semibold mb-1">{title}</h3>
+      <p className="text-sm" style={{ color: T.muted }}>{body}</p>
+    </div>
+  );
+}
+
+// Placeholder rows while a list loads — keeps the layout from jumping when
+// the real rows arrive.
+function ListSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="rounded-2xl" style={{ backgroundColor: T.white, border: `1px solid ${T.border}` }} aria-busy="true" aria-label="Loading">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-4 p-4 animate-pulse" style={{ borderBottom: i < rows - 1 ? `1px solid ${T.border}` : undefined }}>
+          <div className="w-12 h-12 rounded-xl flex-shrink-0" style={{ backgroundColor: T.surface }} />
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 rounded w-2/5" style={{ backgroundColor: T.surface }} />
+            <div className="h-3 rounded w-3/5" style={{ backgroundColor: T.surface }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Event row ────────────────────────────────────────────────────────────
+// Tapping the row opens the builder. Only a published event has a working
+// public link (drafts are hidden from guests), so sharing is offered only
+// once it's published — a draft's primary action is Publish instead.
 function EventRow({ event: e, isLast }: { event: EventRecord; isLast: boolean }) {
   const pct = e.guestCount > 0 ? Math.round((e.confirmedGuestCount / e.guestCount) * 100) : 0;
   const isPublished = e.status === "published";
   const { updateEvent } = useEvents();
   const navigate = useNavigate();
+  const toast = useToast();
   const publicUrl = `${window.location.origin}/i/${e.slug}`;
   const [upgrading, setUpgrading] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const canUpgrade = !planAllows(e.ownerPlan, "personalized_links");
+  const openBuilder = () => navigate(`/dashboard/events/${e.id}/builder`);
 
   async function handlePublishToggle() {
+    const publish = !isPublished;
+    setPublishing(true);
     try {
-      await updateEvent(e.id, { status: isPublished ? "unpublished" : "published" });
-    } catch (err) {
-      console.error("Failed to update event status:", err);
+      await updateEvent(e.id, { status: publish ? "published" : "unpublished" });
+      toast(publish ? `"${e.name}" is live — copy the link to share it` : `"${e.name}" is unpublished`);
+    } catch {
+      toast(publish ? "Couldn't publish. Please try again." : "Couldn't unpublish. Please try again.", "error");
+    } finally {
+      setPublishing(false);
     }
   }
 
-  async function handleViewOrCopy() {
-    if (isPublished) {
-      window.open(publicUrl, "_blank", "noopener,noreferrer");
-    } else {
-      try {
-        await navigator.clipboard.writeText(publicUrl);
-      } catch {
-        // clipboard access can be denied silently; not worth surfacing an error for this
-      }
-    }
-  }
+  const copyLink = () => copyWithToast(publicUrl, toast, "Invitation link copied", "Copy your invitation link:");
+  const viewInvitation = () => window.open(publicUrl, "_blank", "noopener,noreferrer");
 
   return (
     <div
-      className="group relative flex items-center gap-4 p-4 transition-colors hover:bg-[rgba(28, 41, 66,0.04)]"
-      style={{ backgroundColor: T.white, borderBottom: isLast ? undefined : `1px solid ${T.border}` }}
+      className="group relative flex items-center gap-3 sm:gap-4 p-4 first:rounded-t-2xl last:rounded-b-2xl transition-colors hover:bg-[rgba(28,41,66,0.04)]"
+      style={{ borderBottom: isLast ? undefined : `1px solid ${T.border}` }}
     >
-      <span className="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: T.accent }} />
-      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
-        <img src={`https://images.unsplash.com/${e.imageUrl}?w=100&h=100&fit=crop&auto=format`} alt={e.name} className="w-full h-full object-cover" />
-      </div>
+      <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: T.accent }} />
+      <button type="button" onClick={openBuilder} className="flex-1 min-w-0 flex items-center gap-3 sm:gap-4 text-left" aria-label={`Edit ${e.name}`}>
+        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+          <img src={`https://images.unsplash.com/${e.imageUrl}?w=100&h=100&fit=crop&auto=format`} alt="" className="w-full h-full object-cover" />
+        </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-semibold truncate">{e.name}</span>
-          <Badge label={isPublished ? "Published" : "Draft"} variant={isPublished ? "gold" : "muted"} />
-          <PlanBadge plan={e.ownerPlan} />
-        </div>
-        <div className="flex flex-wrap gap-3 text-xs mb-2.5" style={{ color: T.muted }}>
-          <span>{categoryLabel(e.category)}</span>
-          <span className="flex items-center gap-1"><Icon name="calendar" size={11} color={T.muted} />{formatEventDate(e.date)}</span>
-          <span className="flex items-center gap-1"><Icon name="users" size={11} color={T.muted} />{e.guestCount} guests</span>
-          {e.guestCount > 0 && <span style={{ color: T.green }}>✓ {e.confirmedGuestCount} confirmed</span>}
-        </div>
-        {e.guestCount > 0 && (
-          <div className="flex items-center gap-2.5">
-            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: T.surface }}>
-              <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: T.accent, transition: "width 0.5s ease" }} />
-            </div>
-            <span className="text-[11px] font-semibold flex-shrink-0" style={{ color: T.muted }}>{pct}% confirmed</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
+            <span className="text-sm font-semibold truncate max-w-full">{e.name}</span>
+            <Badge label={isPublished ? "Published" : "Draft"} variant={isPublished ? "green" : "muted"} />
+            <PlanBadge plan={e.ownerPlan} />
           </div>
-        )}
-      </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs mb-2.5" style={{ color: T.muted }}>
+            <span className="hidden sm:inline">{categoryLabel(e.category)}</span>
+            <span className="flex items-center gap-1"><Icon name="calendar" size={11} color={T.muted} />{formatEventDate(e.date)}</span>
+            <span className="flex items-center gap-1"><Icon name="users" size={11} color={T.muted} />{e.guestCount} guests</span>
+            {e.guestCount > 0 && <span className="hidden sm:inline" style={{ color: T.green }}>✓ {e.confirmedGuestCount} confirmed</span>}
+          </div>
+          {e.guestCount > 0 && (
+            <div className="flex items-center gap-2.5">
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: T.surface }}>
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: T.accent, transition: "width 0.5s ease" }} />
+              </div>
+              <span className="text-[11px] font-semibold flex-shrink-0" style={{ color: T.muted }}>{pct}% confirmed</span>
+            </div>
+          )}
+        </div>
+      </button>
 
-      <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-        {!planAllows(e.ownerPlan, "personalized_links") && (
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {canUpgrade && (
           <button
             onClick={() => setUpgrading(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
-            style={{ backgroundColor: "rgba(201,166,107,0.18)", color: "#8A6A33" }}
+            className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
+            style={{ backgroundColor: T.goldTint, color: T.gold }}
           >
             Upgrade
           </button>
         )}
         <button
-          onClick={() => navigate(`/dashboard/events/${e.id}/builder`)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-stone-50"
+          onClick={openBuilder}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-stone-50"
           style={{ border: `1px solid ${T.border}`, color: T.charcoal }}
         >
           <Icon name="layout" size={12} color={T.muted} /> Edit invitation
         </button>
-        <button
-          onClick={handlePublishToggle}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-stone-50"
-          style={{ border: `1px solid ${T.border}`, color: T.charcoal }}
-        >
-          <Icon name="eye" size={12} color={T.muted} /> {isPublished ? "Unpublish" : "Publish"}
-        </button>
-        <button
-          onClick={handleViewOrCopy}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-90"
-          style={{ backgroundColor: T.accent, color: T.white }}
-        >
-          <Icon name="share" size={12} color={T.white} /> {isPublished ? "View invitation" : "Copy link"}
-        </button>
+        {isPublished ? (
+          <button
+            onClick={copyLink}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-90"
+            style={{ backgroundColor: T.accent, color: T.white }}
+          >
+            <Icon name="link" size={12} color={T.white} /> Copy link
+          </button>
+        ) : (
+          <button
+            onClick={handlePublishToggle}
+            disabled={publishing}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-90 disabled:opacity-60"
+            style={{ backgroundColor: T.accent, color: T.white }}
+          >
+            <Icon name="eye" size={12} color={T.white} /> {publishing ? "Publishing..." : "Publish"}
+          </button>
+        )}
+        <RowMenu
+          label={`More actions for ${e.name}`}
+          items={[
+            { label: "Edit invitation", onClick: openBuilder },
+            isPublished && { label: "Copy invitation link", onClick: copyLink },
+            isPublished && { label: "View invitation", onClick: viewInvitation },
+            { label: isPublished ? "Unpublish" : "Publish", onClick: handlePublishToggle },
+            canUpgrade && { label: "Upgrade this event", onClick: () => setUpgrading(true) },
+          ]}
+        />
       </div>
       {upgrading && <UpgradeEventModal event={e} onClose={() => setUpgrading(false)} />}
     </div>
@@ -546,12 +713,13 @@ function EventsView() {
   const { events, isLoading } = useEvents();
   const navigate = useNavigate();
 
-  const today = new Date().toISOString().slice(0, 10);
-  const filtered = events.filter((e) => {
-    if (tab === 1) return e.date >= today;
-    if (tab === 2) return e.date < today;
-    return true;
-  });
+  const today = todayIso();
+  const filtered =
+    tab === 1
+      ? events.filter((e) => isUpcoming(e, today)).sort(bySoonest)
+      : tab === 2
+        ? events.filter((e) => !isUpcoming(e, today)).sort((a, b) => bySoonest(b, a))
+        : events;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -581,9 +749,15 @@ function EventsView() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-center py-10" style={{ color: T.muted }}>Loading your events...</p>
-      ) : filtered.length === 0 ? (
+        <ListSkeleton rows={3} />
+      ) : events.length === 0 ? (
         <EmptyEventsState />
+      ) : filtered.length === 0 ? (
+        tab === 1 ? (
+          <EmptyNote icon="calendar" title="No upcoming events" body="Create an event, or find earlier ones under Past Events." />
+        ) : (
+          <EmptyNote icon="calendar" title="No past events yet" body="Events move here the day after they happen." />
+        )
       ) : (
         <EventList events={filtered} />
       )}
@@ -603,12 +777,13 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<"add" | GuestRecord | null>(null);
   const [qrGuest, setQrGuest] = useState<GuestRecord | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const toast = useToast();
   const [remindOpen, setRemindOpen] = useState(false);
   // Bulk selection (Pro): null = not selecting.
   const [selected, setSelected] = useState<Set<string> | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState("");
+  const [confirmBulkRemove, setConfirmBulkRemove] = useState(false);
   const filters = ["All", "Confirmed", "Pending", "Declined"];
   const selectedEvent = events.find((e) => e.id === selectedEventId);
   const eventPlan = selectedEvent?.ownerPlan ?? "free";
@@ -644,11 +819,12 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
     });
   }
 
-  async function runBulk(action: () => Promise<void>) {
+  async function runBulk(action: () => Promise<void>, done: string) {
     setBulkBusy(true);
     setBulkError("");
     try {
       await action();
+      toast(done);
       setSelected(new Set());
       await reloadGuests();
     } catch (err) {
@@ -662,13 +838,8 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
     const ev = events.find((e) => e.id === selectedEventId);
     if (!ev) return;
     const url = `${window.location.origin}/i/${ev.slug}/g/${g.id}`;
-    navigator.clipboard.writeText(url).then(
-      () => {
-        setCopiedId(g.id);
-        setTimeout(() => setCopiedId((c) => (c === g.id ? null : c)), 1500);
-      },
-      () => window.prompt("Copy this guest's invitation link:", url),
-    );
+    const note = ev.status === "published" ? "" : " — publish the event so it opens for guests";
+    copyWithToast(url, toast, `${g.name}'s link copied${note}`, "Copy this guest's invitation link:");
   }
 
   useEffect(() => {
@@ -721,6 +892,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
         notes: values.notes.trim() || null,
         ...(canTools ? { maxPartySize: values.maxPartySize || null } : {}),
       });
+      toast("Guest updated");
     } else {
       await addGuest({
         eventId: selectedEventId,
@@ -732,12 +904,14 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
         notes: values.notes.trim() || undefined,
         maxPartySize: canTools && values.maxPartySize ? values.maxPartySize : undefined,
       });
+      toast(`${values.name.trim()} added`);
     }
     await reloadGuests();
   }
 
   async function handleDelete(id: string) {
     await deleteGuest(id);
+    toast("Guest removed");
     await reloadGuests();
   }
 
@@ -800,7 +974,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
         {[
           { label: "Total", value: String(guests.length), color: T.charcoal },
           { label: "Confirmed", value: String(confirmed.length), color: T.green },
-          { label: "Pending", value: String(pending.length), color: T.accent },
+          { label: "Pending", value: String(pending.length), color: T.amber },
           { label: "Declined", value: String(declined.length), color: T.red },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-4 text-center" style={{ backgroundColor: T.white, border: `1px solid ${T.border}` }}>
@@ -831,6 +1005,27 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
           </p>
           <button onClick={upgradeThisEvent} className="text-xs font-semibold px-3.5 py-2 rounded-lg flex-shrink-0" style={{ backgroundColor: T.accent, color: T.white }}>
             Upgrade for unlimited guests
+          </button>
+        </div>
+      )}
+
+      {(!canLink || !canQr) && guests.length > 0 && !atLimit && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl px-4 py-3 mb-6" style={{ backgroundColor: T.goldTint }}>
+          <p className="text-sm flex items-center gap-2" style={{ color: T.charcoal }}>
+            <Icon name="lock" size={14} color={T.gold} />
+            <span>
+              {[
+                !canLink && `personal invitation links (${requiredPlanLabel("personalized_links")})`,
+                !canQr && `QR check-in (${requiredPlanLabel("checkin")})`,
+              ]
+                .filter(Boolean)
+                .join(" and ")
+                .replace(/^./, (c) => c.toUpperCase())}{" "}
+              unlock when you upgrade this event.
+            </span>
+          </p>
+          <button onClick={upgradeThisEvent} className="text-xs font-semibold px-3.5 py-2 rounded-lg flex-shrink-0 self-start sm:self-auto" style={{ backgroundColor: T.accent, color: T.white }}>
+            See plans
           </button>
         </div>
       )}
@@ -871,7 +1066,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
           className="px-3.5 py-2 rounded-xl text-xs font-medium transition-all hover:bg-stone-100 flex-shrink-0"
           style={{ border: `1px solid ${T.border}`, color: canTools ? T.charcoal : T.muted, backgroundColor: selected ? T.surface : undefined }}
         >
-          {!canTools ? `Select · ${requiredPlanLabel("guest_tools")}` : selected ? "Done" : "Select"}
+          <span className="flex items-center gap-1">{!canTools && <Icon name="lock" size={11} color={T.muted} />}{selected ? "Done" : "Select"}</span>
         </button>
       </div>
 
@@ -890,7 +1085,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
             disabled={bulkBusy || selected.size === 0}
             onChange={(e) => {
               const v = e.target.value;
-              if (v) runBulk(() => updateGuests([...selected], { groupName: v === "none" ? null : (v as keyof typeof GROUP_LABELS) }));
+              if (v) runBulk(() => updateGuests([...selected], { groupName: v === "none" ? null : (v as keyof typeof GROUP_LABELS) }), `Updated ${selected.size} ${selected.size === 1 ? "guest" : "guests"}`);
             }}
             className="px-2.5 py-1.5 rounded-lg text-xs outline-none disabled:opacity-60"
             style={{ border: `1px solid ${T.border}`, backgroundColor: T.white, color: T.charcoal }}
@@ -905,7 +1100,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
             disabled={bulkBusy || selected.size === 0}
             onChange={(e) => {
               const v = e.target.value as "confirmed" | "pending" | "declined" | "";
-              if (v) runBulk(() => updateGuests([...selected], { rsvpStatus: v }));
+              if (v) runBulk(() => updateGuests([...selected], { rsvpStatus: v }), `Updated ${selected.size} ${selected.size === 1 ? "guest" : "guests"}`);
             }}
             className="px-2.5 py-1.5 rounded-lg text-xs outline-none disabled:opacity-60"
             style={{ border: `1px solid ${T.border}`, backgroundColor: T.white, color: T.charcoal }}
@@ -918,9 +1113,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
           </select>
           <button
             disabled={bulkBusy || selected.size === 0}
-            onClick={() => {
-              if (window.confirm(`Remove ${selected.size} ${selected.size === 1 ? "guest" : "guests"}? This can't be undone.`)) runBulk(() => deleteGuests([...selected]));
-            }}
+            onClick={() => setConfirmBulkRemove(true)}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-60"
             style={{ color: T.red, border: `1px solid ${T.border}`, backgroundColor: T.white }}
           >
@@ -933,7 +1126,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
 
       {/* Table */}
       {guestsLoading ? (
-        <p className="text-sm text-center py-10" style={{ color: T.muted }}>Loading guests...</p>
+        <ListSkeleton rows={4} />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center text-center py-16 rounded-2xl" style={{ backgroundColor: T.white, border: `1px dashed ${T.border}` }}>
           <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: T.surface }}>
@@ -945,8 +1138,8 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: T.white, border: `1px solid ${T.border}` }}>
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: T.muted, borderBottom: `1px solid ${T.border}` }}>
+        <div className="rounded-2xl" style={{ backgroundColor: T.white, border: `1px solid ${T.border}` }}>
+          <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: T.muted, borderBottom: `1px solid ${T.border}` }}>
             <span>Guest</span>
             <span className="hidden md:block">Group</span>
             <span>RSVP</span>
@@ -957,7 +1150,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
           {filtered.map((g, i) => (
             <div
               key={g.id}
-              className="group relative grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center px-5 py-3.5 transition-colors hover:bg-[rgba(28, 41, 66,0.04)]"
+              className="group relative grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto_auto] gap-3 sm:gap-4 items-center px-4 sm:px-5 py-3.5 last:rounded-b-2xl transition-colors hover:bg-[rgba(28,41,66,0.04)]"
               style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${T.border}` : undefined, backgroundColor: T.white }}
             >
               <span className="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: T.accent }} />
@@ -985,17 +1178,17 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
               <span className="hidden md:inline text-sm" style={{ color: T.muted }}>{g.groupName ? GROUP_LABELS[g.groupName] : "—"}</span>
               <Badge
                 label={g.rsvpStatus === "confirmed" ? "Confirmed" : g.rsvpStatus === "pending" ? "Pending" : "Declined"}
-                variant={g.rsvpStatus === "confirmed" ? "green" : g.rsvpStatus === "pending" ? "gold" : "red"}
+                variant={g.rsvpStatus === "confirmed" ? "green" : g.rsvpStatus === "pending" ? "amber" : "red"}
               />
               <span className="hidden sm:inline text-sm text-center" style={{ color: T.muted }}>{g.rsvpStatus !== "declined" ? g.numberOfGuests || "—" : "—"}</span>
-              <div className="flex items-center gap-1.5">
+              <div className="hidden sm:flex items-center gap-1.5">
                 <button
                   onClick={() => (canLink ? copyGuestLink(g) : upgradeThisEvent())}
                   title={canLink ? "Copy this guest's personal invitation link" : `Personalized links are a ${requiredPlanLabel("personalized_links")} feature`}
                   className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-stone-100"
-                  style={{ color: copiedId === g.id ? T.green : canLink ? T.charcoal : T.muted, border: `1px solid ${T.border}` }}
+                  style={{ color: canLink ? T.charcoal : T.muted, border: `1px solid ${T.border}` }}
                 >
-                  {copiedId === g.id ? "Copied!" : canLink ? "Link" : `Link · ${requiredPlanLabel("personalized_links")}`}
+                  <span className="flex items-center gap-1">{!canLink && <Icon name="lock" size={11} color={T.muted} />}Link</span>
                 </button>
                 <button
                   onClick={() => (canQr ? setQrGuest(g) : upgradeThisEvent())}
@@ -1003,7 +1196,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
                   className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-stone-100"
                   style={{ color: canQr ? T.charcoal : T.muted, border: `1px solid ${T.border}` }}
                 >
-                  {canQr ? "QR" : `QR · ${requiredPlanLabel("checkin")}`}
+                  <span className="flex items-center gap-1">{!canQr && <Icon name="lock" size={11} color={T.muted} />}QR</span>
                 </button>
                 <button
                   onClick={() => setModal(g)}
@@ -1013,9 +1206,36 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
                   Edit
                 </button>
               </div>
+              <RowMenu
+                className="sm:hidden"
+                label={`Actions for ${g.name}`}
+                items={[
+                  { label: "Edit guest", onClick: () => setModal(g) },
+                  canLink
+                    ? { label: "Copy personal link", onClick: () => copyGuestLink(g) }
+                    : { label: `Personal link · ${requiredPlanLabel("personalized_links")}`, onClick: upgradeThisEvent, tone: "muted" },
+                  canQr
+                    ? { label: "Show check-in QR", onClick: () => setQrGuest(g) }
+                    : { label: `Check-in QR · ${requiredPlanLabel("checkin")}`, onClick: upgradeThisEvent, tone: "muted" },
+                ]}
+              />
             </div>
           ))}
         </div>
+      )}
+
+      {confirmBulkRemove && selected && (
+        <ConfirmDialog
+          title={`Remove ${selected.size} ${selected.size === 1 ? "guest" : "guests"}?`}
+          body="They'll be deleted from this event along with their RSVPs. This can't be undone."
+          confirmLabel="Remove"
+          danger
+          onConfirm={() => {
+            setConfirmBulkRemove(false);
+            runBulk(() => deleteGuests([...selected]), `Removed ${selected.size} ${selected.size === 1 ? "guest" : "guests"}`);
+          }}
+          onCancel={() => setConfirmBulkRemove(false)}
+        />
       )}
 
       {qrGuest && <GuestQrModal guest={qrGuest} onClose={() => setQrGuest(null)} />}
@@ -1042,6 +1262,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
           remainingSlots={limit === null ? null : Math.max(0, limit - guests.length)}
           onImport={async (rows) => {
             await addGuests(rows.map((g) => ({ ...g, eventId: selectedEventId })));
+            toast(`Imported ${rows.length} ${rows.length === 1 ? "guest" : "guests"}`);
             await reloadGuests();
           }}
           onClose={() => setImportOpen(false)}
@@ -1102,7 +1323,9 @@ function TemplatesView({ onUpgrade }: { onUpgrade: () => void }) {
               {t.premium && (
                 <span className="absolute top-3 right-3 text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: T.accent, color: T.white }}>Premium</span>
               )}
-              <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: "rgba(28, 41, 66,0.5)" }}>
+              {/* Always shown on touch screens (there's no hover to reveal it); on
+                  pointer devices it appears on hover or keyboard focus. */}
+              <div className="hover-reveal absolute inset-0 flex items-end justify-center gap-2 pb-4" style={{ background: "linear-gradient(to top, rgba(28,41,66,0.75), rgba(28,41,66,0) 55%)" }}>
                 <button onClick={() => setPreviewName(t.name)} className="px-4 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: T.white, color: T.charcoal }}>Preview</button>
                 {t.premium && !canUsePremium ? (
                   <button onClick={onUpgrade} className="px-4 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: T.accent, color: T.white }}>Upgrade to use</button>
@@ -1267,11 +1490,11 @@ function AnalyticsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void
               </div>
               <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ backgroundColor: T.surface, color: T.muted }}>Last 14 days</span>
             </div>
-            <div className="flex items-end gap-1" style={{ height: "120px" }}>
+            <div className="flex items-end gap-1" style={{ height: "120px" }} role="img" aria-label={`RSVP activity, last 14 days: ${buckets.map((b) => `${b.label} ${b.count}`).join(", ")}`}>
               {buckets.map((b) => (
                 <div
                   key={b.key}
-                  className="flex-1 rounded-t-sm transition-all hover:opacity-70 cursor-pointer"
+                  className="flex-1 rounded-t-sm transition-all hover:opacity-70"
                   style={{
                     height: `${Math.max(3, (b.count / maxBucket) * 100)}%`,
                     backgroundColor: b.count > 0 ? T.accent : T.border,
@@ -1294,7 +1517,7 @@ function AnalyticsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void
               <div className="space-y-4">
                 {[
                   { label: "Confirmed", value: confirmed.length, color: T.green },
-                  { label: "Pending", value: pending.length, color: T.accent },
+                  { label: "Pending", value: pending.length, color: T.amber },
                   { label: "Declined", value: declined.length, color: T.red },
                 ].map((r) => (
                   <div key={r.label}>
@@ -1338,12 +1561,12 @@ function AnalyticsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void
 
 // ─── Billing ──────────────────────────────────────────────────────────────
 // Billing is per event: every event starts Free and is upgraded on its own
-// with a one-time payment (PayMongo — GCash, Maya or card). This page
+// with a one-time payment (PayMongo — QR Ph). This page
 // explains the plans, lists each event with its plan and an Upgrade
 // button, and shows the organizer's payment history.
-const PAYMENT_STATUS: Record<Payment["status"], { label: string; variant: "green" | "gold" | "muted" | "red" }> = {
+const PAYMENT_STATUS: Record<Payment["status"], { label: string; variant: BadgeVariant }> = {
   paid: { label: "Paid", variant: "green" },
-  pending: { label: "Pending", variant: "gold" },
+  pending: { label: "Pending", variant: "amber" },
   expired: { label: "Not completed", variant: "muted" },
   failed: { label: "Failed", variant: "red" },
 };
@@ -1368,7 +1591,7 @@ function BillingView() {
       <div className="mb-7">
         <h1 className="text-2xl font-bold mb-0.5" style={{ letterSpacing: "-0.025em" }}>Billing & Plans</h1>
         <p className="text-sm" style={{ color: T.muted }}>
-          Plans are per event — upgrade only the events that need it. A one-time payment with GCash, Maya or card; no subscription.
+          Plans are per event — upgrade only the events that need it. A one-time QR Ph payment (scan with GCash, Maya or any bank app); no subscription.
         </p>
       </div>
 
@@ -1396,7 +1619,7 @@ function BillingView() {
 
       <h2 className="font-semibold mb-3">Your events</h2>
       {isLoading ? (
-        <p className="text-sm py-6" style={{ color: T.muted }}>Loading your events...</p>
+        <ListSkeleton rows={2} />
       ) : events.length === 0 ? (
         <EmptyEventsState />
       ) : (
@@ -1459,7 +1682,7 @@ function PlanBadge({ plan }: { plan: EventRecord["ownerPlan"] }) {
   return (
     <span
       className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-      style={{ backgroundColor: paid ? "rgba(201,166,107,0.18)" : T.surface, color: paid ? "#8A6A33" : T.muted }}
+      style={{ backgroundColor: paid ? T.goldTint : T.surface, color: paid ? T.gold : T.muted }}
     >
       {planLabel(plan)}
     </span>

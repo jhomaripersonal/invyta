@@ -1,16 +1,8 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { GuestGroup } from "../../types/models";
 import type { GuestRecord, GuestRsvpStatus } from "../../lib/guests-store";
-
-const T = {
-  accent: "#1C2942",
-  charcoal: "#1C2942",
-  cream: "#FAF8F5",
-  border: "#E7E1D8",
-  muted: "#78716C",
-  white: "#FFFFFF",
-  red: "#E55757",
-};
+import { T } from "../../lib/tokens";
+import { useDialog } from "../../components/useDialog";
 
 const GROUP_OPTIONS: { id: GuestGroup; label: string }[] = [
   { id: "family", label: "Family" },
@@ -57,6 +49,10 @@ interface Props {
 }
 
 export function GuestFormModal({ guest, canLimitParty, onSave, onDelete, onClose }: Props) {
+  const dialog = useDialog(onClose);
+  const fieldId = useId();
+  // Removing is permanent, so it takes a second tap to confirm.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [values, setValues] = useState<GuestFormValues>({
     name: guest?.name ?? "",
     email: guest?.email ?? "",
@@ -106,52 +102,52 @@ export function GuestFormModal({ guest, canLimitParty, onSave, onDelete, onClose
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(28, 41, 66,0.45)" }} onClick={onClose}>
-      <div
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl p-6"
+      <div {...dialog.props}
+        className="outline-none w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl p-6"
         style={{ backgroundColor: T.white }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold" style={{ color: T.charcoal }}>{guest ? "Edit Guest" : "Add Guest"}</h2>
+          <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>{guest ? "Edit Guest" : "Add Guest"}</h2>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100" style={{ color: T.muted }} aria-label="Close">✕</button>
         </div>
 
         <div className="mb-4">
-          <label className={labelClass} style={{ color: T.muted }}>Full name</label>
-          <input value={values.name} onChange={(e) => set("name", e.target.value)} className={inputClass} style={inputStyle} />
+          <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-name`}>Full name</label>
+          <input id={`${fieldId}-name`} autoComplete="off" value={values.name} onChange={(e) => set("name", e.target.value)} className={inputClass} style={inputStyle} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-email`}>Email</label>
+            <input id={`${fieldId}-email`} type="email" inputMode="email" autoComplete="off" value={values.email} onChange={(e) => set("email", e.target.value)} className={inputClass} style={inputStyle} />
+          </div>
+          <div>
+            <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-phone`}>Phone</label>
+            <input id={`${fieldId}-phone`} type="tel" inputMode="tel" autoComplete="off" value={values.phone} onChange={(e) => set("phone", e.target.value)} className={inputClass} style={inputStyle} />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className={labelClass} style={{ color: T.muted }}>Email</label>
-            <input value={values.email} onChange={(e) => set("email", e.target.value)} className={inputClass} style={inputStyle} />
-          </div>
-          <div>
-            <label className={labelClass} style={{ color: T.muted }}>Phone</label>
-            <input value={values.phone} onChange={(e) => set("phone", e.target.value)} className={inputClass} style={inputStyle} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className={labelClass} style={{ color: T.muted }}>Group</label>
-            <select value={values.groupName} onChange={(e) => set("groupName", e.target.value as GuestGroup | "")} className={inputClass} style={inputStyle}>
+            <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-group`}>Group</label>
+            <select id={`${fieldId}-group`} value={values.groupName} onChange={(e) => set("groupName", e.target.value as GuestGroup | "")} className={inputClass} style={inputStyle}>
               <option value="">No group</option>
               {GROUP_OPTIONS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
             </select>
           </div>
           <div>
-            <label className={labelClass} style={{ color: T.muted }}>Number of guests</label>
-            <input type="number" min={0} max={20} value={values.numberOfGuests} onChange={(e) => set("numberOfGuests", Math.max(0, Number(e.target.value)))} className={inputClass} style={inputStyle} />
+            <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-count`}>Number of guests</label>
+            <input id={`${fieldId}-count`} type="number" min={0} max={20} value={values.numberOfGuests} onChange={(e) => set("numberOfGuests", Math.max(0, Number(e.target.value)))} className={inputClass} style={inputStyle} />
           </div>
         </div>
 
         <div className="mb-4">
-          <label className={labelClass} style={{ color: T.muted }} htmlFor="guest-max-party">
+          <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-max-party`}>
             Can RSVP for up to{!canLimitParty && <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: T.accent, color: T.white }}>Pro</span>}
           </label>
           <select
-            id="guest-max-party"
+            id={`${fieldId}-max-party`}
             value={values.maxPartySize}
             disabled={!canLimitParty}
             onChange={(e) => set("maxPartySize", e.target.value ? Number(e.target.value) : "")}
@@ -174,24 +170,30 @@ export function GuestFormModal({ guest, canLimitParty, onSave, onDelete, onClose
           // status field; status only changes once they've actually
           // responded, which Edit lets you record manually).
           <div className="mb-4">
-            <label className={labelClass} style={{ color: T.muted }}>RSVP status</label>
-            <select value={values.rsvpStatus} onChange={(e) => set("rsvpStatus", e.target.value as GuestRsvpStatus)} className={inputClass} style={inputStyle}>
+            <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-status`}>RSVP status</label>
+            <select id={`${fieldId}-status`} value={values.rsvpStatus} onChange={(e) => set("rsvpStatus", e.target.value as GuestRsvpStatus)} className={inputClass} style={inputStyle}>
               {STATUS_OPTIONS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
           </div>
         )}
 
         <div className="mb-5">
-          <label className={labelClass} style={{ color: T.muted }}>Notes</label>
-          <textarea rows={3} value={values.notes} onChange={(e) => set("notes", e.target.value)} className={`${inputClass} resize-none`} style={inputStyle} placeholder="Private notes for your team — not visible to the guest" />
+          <label className={labelClass} style={{ color: T.muted }} htmlFor={`${fieldId}-notes`}>Notes</label>
+          <textarea id={`${fieldId}-notes`} rows={3} value={values.notes} onChange={(e) => set("notes", e.target.value)} className={`${inputClass} resize-none`} style={inputStyle} placeholder="Private notes for your team — not visible to the guest" />
         </div>
 
-        {error && <p className="text-xs mb-4" style={{ color: T.red }}>{error}</p>}
+        {error && <p role="alert" className="text-xs mb-4" style={{ color: T.red }}>{error}</p>}
 
         <div className="flex items-center justify-between gap-3">
           {guest && onDelete ? (
-            <button onClick={handleDelete} disabled={deleting} className="text-xs font-semibold px-3 py-2.5 rounded-xl disabled:opacity-60" style={{ color: T.red }}>
-              {deleting ? "Removing..." : "Remove guest"}
+            <button
+              onClick={() => (confirmingDelete ? handleDelete() : setConfirmingDelete(true))}
+              onBlur={() => setConfirmingDelete(false)}
+              disabled={deleting}
+              className="text-xs font-semibold px-3 py-2.5 rounded-xl disabled:opacity-60"
+              style={{ color: T.red, backgroundColor: confirmingDelete ? "rgba(180,35,24,0.08)" : undefined }}
+            >
+              {deleting ? "Removing..." : confirmingDelete ? "Tap again to remove" : "Remove guest"}
             </button>
           ) : <span />}
           <div className="flex items-center gap-2">

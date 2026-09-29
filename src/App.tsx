@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-route
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { EventsProvider } from "./lib/events-store";
 import { GuestsProvider } from "./lib/guests-store";
+import { ToastProvider } from "./components/Toast";
+import PageLoader from "./components/PageLoader";
 
 // Every page is its own chunk, downloaded only when visited. Above all this
 // keeps the public invitation — what guests open, often on mobile data —
@@ -43,7 +45,7 @@ function DashboardRoute() {
 // behind it is protected server-side by is_admin() on every query.
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  if (isLoading) return null;
+  if (isLoading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
   if (!user.isAdmin) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
@@ -53,14 +55,14 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 // in (e.g. tapping "Get started" on the landing page) goes to the app.
 function GuestOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  if (isLoading) return null;
+  if (isLoading) return <PageLoader />;
   if (user) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  if (isLoading) return null;
+  if (isLoading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
@@ -70,11 +72,12 @@ export default function App() {
     <AuthProvider>
       <EventsProvider>
         <GuestsProvider>
+          <ToastProvider>
           <BrowserRouter>
             <div className="min-h-screen" style={{ fontFamily: "var(--font-sans)" }}>
-              {/* A page's chunk usually arrives in a moment; showing nothing
-                  meanwhile avoids a spinner flashing on fast connections. */}
-              <Suspense fallback={null}>
+              {/* A page's chunk usually arrives in a moment; PageLoader
+                  waits briefly before showing, so fast loads don't flash. */}
+              <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<LandingRoute />} />
                   <Route path="/login" element={<GuestOnlyRoute><LoginPage /></GuestOnlyRoute>} />
@@ -98,6 +101,14 @@ export default function App() {
                   <Route path="/i/:slug/g/:guestId" element={<PublicInvitationPage />} />
                   <Route
                     path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardRoute />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/:view"
                     element={
                       <ProtectedRoute>
                         <DashboardRoute />
@@ -133,6 +144,7 @@ export default function App() {
               </Suspense>
             </div>
           </BrowserRouter>
+          </ToastProvider>
         </GuestsProvider>
       </EventsProvider>
     </AuthProvider>
