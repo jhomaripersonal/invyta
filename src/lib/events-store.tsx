@@ -98,15 +98,19 @@ function isInvitationConfig(value: unknown): value is InvitationConfig {
 
 // Invitations saved before a section type existed (e.g. Video) get it added,
 // switched off and placed last, so the builder lists it and the invitation
-// itself looks exactly as before.
+// itself looks exactly as before. A section type the app no longer knows
+// (e.g. one removed after being saved) is dropped — there's no renderer or
+// editor for it, and rendering it would crash the whole invitation.
 function withAllSections(config: InvitationConfig): InvitationConfig {
-  const present = new Set(config.sections.map((s) => s.type));
+  const known = new Set<string>(SECTION_ORDER);
+  const sections = config.sections.filter((s) => known.has(s.type));
+  const present = new Set(sections.map((s) => s.type));
   const missing = SECTION_ORDER.filter((t) => !present.has(t));
-  if (missing.length === 0) return config;
-  const nextOrder = Math.max(-1, ...config.sections.map((s) => s.order)) + 1;
+  if (missing.length === 0 && sections.length === config.sections.length) return config;
+  const nextOrder = Math.max(-1, ...sections.map((s) => s.order)) + 1;
   return {
     ...config,
-    sections: [...config.sections, ...missing.map((type, i) => ({ type, enabled: false, order: nextOrder + i, content: {} }))],
+    sections: [...sections, ...missing.map((type, i) => ({ type, enabled: false, order: nextOrder + i, content: {} }))],
   };
 }
 
