@@ -4,16 +4,21 @@ import { invitationUrl, isSlugAvailable, normalizeSlugInput, setEventSlug, slugP
 import { planAllows, requiredPlanLabel } from "../../../data/plan-limits";
 import { T } from "../../../lib/tokens";
 import { useDialog } from "../../../components/useDialog";
+import { QrCode } from "../../../components/QrCode";
 
 type Availability = "idle" | "checking" | "available" | "taken";
 
-// The invitation's link: copy it, and — on Premium and up — choose a
-// custom one. Old links keep working (they redirect), so changing it is
-// safe even after the invitation has been shared.
-export default function LinkModal({ event, onSaved, onUpgrade, onClose }: {
+// The invitation's link: copy it, share it, print its QR code, and — on
+// Premium and up — choose a custom one. Old links keep working (they
+// redirect), so changing it is safe even after the invitation has been
+// shared. Opened right after publishing (justPublished) it doubles as the
+// "you're live" moment and points the host at their guest list next.
+export default function LinkModal({ event, justPublished = false, onSaved, onUpgrade, onAddGuests, onClose }: {
   event: EventRecord;
+  justPublished?: boolean;
   onSaved: () => Promise<void> | void;
   onUpgrade: () => void;
+  onAddGuests: () => void;
   onClose: () => void;
 }) {
   const dialog = useDialog(onClose);
@@ -23,6 +28,9 @@ export default function LinkModal({ event, onSaved, onUpgrade, onClose }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const isPublished = event.status === "published";
 
   const problem = slug === event.slug ? null : slugProblem(slug);
   const changed = slug !== event.slug;
@@ -50,6 +58,14 @@ export default function LinkModal({ event, onSaved, onUpgrade, onClose }: {
     }
   }
 
+  async function share() {
+    try {
+      await navigator.share({ title: event.name, url: invitationUrl(event.slug) });
+    } catch {
+      // Dismissing the share sheet rejects too — nothing to report.
+    }
+  }
+
   async function save() {
     setSaving(true);
     setError("");
@@ -69,7 +85,12 @@ export default function LinkModal({ event, onSaved, onUpgrade, onClose }: {
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" style={{ backgroundColor: "rgba(28, 41, 66,0.45)" }} onClick={onClose}>
       <div {...dialog.props} className="outline-none w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: T.white }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 mb-4">
-          <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>Invitation link</h2>
+          <div>
+            <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>
+              {justPublished ? "Your invitation is live" : "Invitation link"}
+            </h2>
+            {justPublished && <p className="text-sm mt-0.5" style={{ color: T.muted }}>Share this link with your guests, or add them to send personal invites.</p>}
+          </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100" style={{ color: T.muted }} aria-label="Close">✕</button>
         </div>
 
@@ -81,7 +102,40 @@ export default function LinkModal({ event, onSaved, onUpgrade, onClose }: {
           <button onClick={copy} className="px-4 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0" style={{ backgroundColor: T.accent, color: T.white }}>
             {copied ? "Copied!" : "Copy"}
           </button>
+          {canShare && (
+            <button onClick={share} className="px-4 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0 hover:bg-stone-100" style={{ border: `1px solid ${T.border}`, color: T.charcoal }}>
+              Share
+            </button>
+          )}
         </div>
+        {!isPublished && (
+          <p className="text-xs -mt-4 mb-6" style={{ color: T.muted }}>This link opens for guests once you publish the invitation.</p>
+        )}
+
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-xl p-2 flex-shrink-0" style={{ border: `1px solid ${T.border}` }}>
+            <QrCode payload={invitationUrl(event.slug)} size={96} onDataUrlReady={setQrDataUrl} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold" style={{ color: T.charcoal }}>QR code</p>
+            <p className="text-xs mb-2" style={{ color: T.muted }}>For printed invitations, save-the-dates or signage.</p>
+            {qrDataUrl && (
+              <a href={qrDataUrl} download={`${event.slug}-qr.png`} className="text-xs font-semibold" style={{ color: T.accent }}>
+                Download PNG
+              </a>
+            )}
+          </div>
+        </div>
+
+        {justPublished && (
+          <button
+            onClick={onAddGuests}
+            className="w-full py-3 rounded-xl text-sm font-semibold mb-6 transition-all hover:opacity-90"
+            style={{ backgroundColor: T.accent, color: T.white }}
+          >
+            Add your guests →
+          </button>
+        )}
 
         {canCustomize ? (
           <>

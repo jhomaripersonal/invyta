@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import webAppLogo from "../assets/webApp-logo-mark.png";
 import { useAuth } from "../lib/auth-context";
 import { useEvents, type EventRecord } from "../lib/events-store";
@@ -28,10 +28,12 @@ import { useToast } from "../components/Toast";
 import TemplatePreviewModal from "../components/invitation/TemplatePreviewModal";
 import { accountPlan, guestLimit, planAllows, planLabel, requiredPlanLabel, type PlanFeature } from "../data/plan-limits";
 import { T } from "../lib/tokens";
+import { useSelectedEvent } from "../lib/use-selected-event";
 
 type NavTarget = "landing" | "dashboard" | "login";
 const VIEWS = ["home", "events", "templates", "analytics", "billing", "guests", "checkin", "settings"] as const;
 type View = (typeof VIEWS)[number];
+const EVENT_SCOPED_VIEWS = ["guests", "checkin", "analytics"] as const;
 
 // ─── SVG Icon set ─────────────────────────────────────────────────────────
 function Icon({ name, size = 18, color = "currentColor" }: { name: string; size?: number; color?: string }) {
@@ -218,7 +220,13 @@ export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) 
   const { user, logout } = useAuth();
   const { events, isLoading: eventsLoading } = useEvents();
   const navigate = useNavigate();
-  const setView = (v: View) => navigate(v === "home" ? "/dashboard" : `/dashboard/${v}`);
+  const [searchParams] = useSearchParams();
+  // Moving between the per-event views keeps the event that's being looked at.
+  const setView = (v: View) => {
+    const eventId = searchParams.get("event");
+    const keep = eventId && (EVENT_SCOPED_VIEWS as readonly View[]).includes(v) ? `?event=${eventId}` : "";
+    navigate((v === "home" ? "/dashboard" : `/dashboard/${v}`) + keep);
+  };
   const displayName = user?.name ?? "";
   const initials = displayName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
   const goToBilling = () => setView("billing");
@@ -604,6 +612,8 @@ function EventRow({ event: e, isLast }: { event: EventRecord; isLast: boolean })
   const [publishing, setPublishing] = useState(false);
   const canUpgrade = !planAllows(e.ownerPlan, "personalized_links");
   const openBuilder = () => navigate(`/dashboard/events/${e.id}/builder`);
+  const openGuests = () => navigate(`/dashboard/guests?event=${e.id}`);
+  const openCheckin = () => navigate(`/dashboard/checkin?event=${e.id}`);
 
   async function handlePublishToggle() {
     const publish = !isPublished;
@@ -694,6 +704,8 @@ function EventRow({ event: e, isLast }: { event: EventRecord; isLast: boolean })
           label={`More actions for ${e.name}`}
           items={[
             { label: "Edit invitation", onClick: openBuilder },
+            { label: "Manage guests", onClick: openGuests },
+            { label: "Check-in", onClick: openCheckin },
             isPublished && { label: "Copy invitation link", onClick: copyLink },
             isPublished && { label: "View invitation", onClick: viewInvitation },
             { label: isPublished ? "Unpublish" : "Publish", onClick: handlePublishToggle },
@@ -770,7 +782,7 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
   const { events, isLoading: eventsLoading } = useEvents();
   const { guestsForEvent, addGuest, addGuests, updateGuest, updateGuests, deleteGuest, deleteGuests } = useGuests();
   const [importOpen, setImportOpen] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useSelectedEvent(events);
   const [guests, setGuests] = useState<GuestRecord[]>([]);
   const [guestsLoading, setGuestsLoading] = useState(true);
   const [filter, setFilter] = useState("All");
@@ -841,10 +853,6 @@ function GuestsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void })
     const note = ev.status === "published" ? "" : " — publish the event so it opens for guests";
     copyWithToast(url, toast, `${g.name}'s link copied${note}`, "Copy this guest's invitation link:");
   }
-
-  useEffect(() => {
-    if (!selectedEventId && events.length > 0) setSelectedEventId(events[0].id);
-  }, [events, selectedEventId]);
 
   async function reloadGuests() {
     if (!selectedEventId) return;
@@ -1382,13 +1390,9 @@ function last14DayBuckets(guests: GuestRecord[]): { key: string; label: string; 
 function AnalyticsView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void }) {
   const { events, isLoading: eventsLoading } = useEvents();
   const { guestsForEvent } = useGuests();
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useSelectedEvent(events);
   const [guests, setGuests] = useState<GuestRecord[]>([]);
   const [guestsLoading, setGuestsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!selectedEventId && events.length > 0) setSelectedEventId(events[0].id);
-  }, [events, selectedEventId]);
 
   useEffect(() => {
     if (!selectedEventId) {

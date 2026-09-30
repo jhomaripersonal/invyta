@@ -48,7 +48,8 @@ export default function InvitationBuilderPage() {
   // so they open as a bottom sheet from a toolbar instead.
   const [sheet, setSheet] = useState<null | "sections" | "edit" | "design">(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(false);
+  // "published" opens the link panel as the post-publish share step.
+  const [linkOpen, setLinkOpen] = useState<false | "link" | "published">(false);
   const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("mobile");
   const [previewRef, previewHeight] = useScrollportHeight();
   const toast = useToast();
@@ -190,7 +191,8 @@ export default function InvitationBuilderPage() {
         return;
       }
       await updateEvent(event.id, { status: publish ? "published" : "unpublished" });
-      toast(publish ? "Published — your invitation is live" : "Unpublished — the link is offline");
+      if (publish) setLinkOpen("published");
+      else toast("Unpublished — the link is offline");
     } catch {
       toast(publish ? "Couldn't publish. Please try again." : "Couldn't unpublish. Please try again.", "error");
     } finally {
@@ -246,7 +248,7 @@ export default function InvitationBuilderPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <SaveStatus state={saveState} error={saveError} />
             <button
-              onClick={() => setLinkOpen(true)}
+              onClick={() => setLinkOpen("link")}
               className="hidden sm:block px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:bg-stone-100"
               style={{ border: `1px solid ${T.border}`, color: T.charcoal }}
             >
@@ -394,7 +396,9 @@ export default function InvitationBuilderPage() {
         {linkOpen && (
           <LinkModal
             event={event}
+            justPublished={linkOpen === "published"}
             onSaved={refresh}
+            onAddGuests={() => navigate(`/dashboard/guests?event=${event.id}`)}
             onUpgrade={() => { setLinkOpen(false); setUpgradeOpen(true); }}
             onClose={() => setLinkOpen(false)}
           />
