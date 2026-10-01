@@ -558,6 +558,8 @@ export const TEMPLATE_PREVIEWS: Record<string, TemplatePreviewSeed> = Object.fro
 // be sending guests someone else's details. The two copy lines below are
 // generic enough to be safe starting text.
 export interface TemplateDesign {
+  // The category the template's copy lines were written for.
+  category: EventCategory;
   theme: InvitationTheme;
   coverStyle: CoverStyle;
   sectionStyles: Partial<Record<InvitationSectionType, string>>;
@@ -574,6 +576,7 @@ export const TEMPLATE_DESIGNS: Record<string, TemplateDesign> = Object.fromEntri
   BLUEPRINTS.map((bp) => [
     bp.templateName,
     {
+      category: bp.category,
       theme: themeOf(bp),
       coverStyle: bp.coverStyle,
       sectionStyles: bp.sectionStyles ?? {},

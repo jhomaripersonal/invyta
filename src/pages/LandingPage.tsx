@@ -156,8 +156,8 @@ const HERO_INVITATION: InvitationConfig = {
 };
 
 // Natural scene size, scene px.
-const SCENE_W = 540;
-const SCENE_H = 410;
+export const SCENE_W = 540;
+export const SCENE_H = 410;
 
 // Laptop: lid (bezel + screen) over a wider aluminium base.
 const LAPTOP = {
@@ -431,6 +431,47 @@ function useFitScale(naturalWidth: number) {
   return { measureRef, scale };
 }
 
+// The laptop + phone scene at its natural size (SCENE_W × SCENE_H) times
+// `scale`. Also used, without the entrance animation, for the launch
+// post images (src/pages/LaunchMockup.tsx).
+export function DeviceScene({ scale = 1, entrance = true }: { scale?: number; entrance?: boolean }) {
+  return (
+    // inert: the invitations inside are pictures here — nothing in them
+    // should take focus or clicks.
+    <div inert className="relative select-none" style={{ width: SCENE_W, height: SCENE_H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+      {/* Soft shadow under the laptop's base */}
+      <div
+        className="absolute"
+        style={{
+          left: LAPTOP.left - 10,
+          width: LAPTOP.baseW + 20,
+          top: LAPTOP.top + LAPTOP.screenH + LAPTOP.bezel + LAPTOP.bezelTop + LAPTOP.baseH - 12,
+          height: 30,
+          background: "radial-gradient(closest-side, rgba(28,41,66,0.28), rgba(28,41,66,0))",
+        }}
+      />
+      {/* The wrappers cover the whole scene: an animated (transformed)
+          element becomes its absolutely-positioned children's frame. */}
+      <motion.div
+        className="absolute inset-0"
+        initial={entrance ? { opacity: 0, y: 24 } : false}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: EASE, delay: 0.1 }}
+      >
+        <Laptop />
+      </motion.div>
+      <motion.div
+        className="absolute inset-0"
+        initial={entrance ? { opacity: 0, y: 40, x: 16 } : false}
+        animate={{ opacity: 1, y: 0, x: 0 }}
+        transition={{ duration: 0.8, ease: EASE, delay: 0.35 }}
+      >
+        <Phone />
+      </motion.div>
+    </div>
+  );
+}
+
 function DeviceShowcase() {
   // Measures its own (purely CSS-driven) width to compute the fit scale —
   // deliberately not the box being scaled, or the two would feed back into
@@ -445,39 +486,7 @@ function DeviceShowcase() {
           aria-label="The sample invitation for Elena & Marco, open on a laptop and on a phone"
           style={{ width: SCENE_W * scale, height: SCENE_H * scale }}
         >
-          {/* inert: the invitations inside are pictures here — nothing in
-              them should take focus or clicks. */}
-          <div inert className="relative select-none" style={{ width: SCENE_W, height: SCENE_H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-            {/* Soft shadow under the laptop's base */}
-            <div
-              className="absolute"
-              style={{
-                left: LAPTOP.left - 10,
-                width: LAPTOP.baseW + 20,
-                top: LAPTOP.top + LAPTOP.screenH + LAPTOP.bezel + LAPTOP.bezelTop + LAPTOP.baseH - 12,
-                height: 30,
-                background: "radial-gradient(closest-side, rgba(28,41,66,0.28), rgba(28,41,66,0))",
-              }}
-            />
-            {/* The wrappers cover the whole scene: an animated (transformed)
-                element becomes its absolutely-positioned children's frame. */}
-            <motion.div
-              className="absolute inset-0"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: EASE, delay: 0.1 }}
-            >
-              <Laptop />
-            </motion.div>
-            <motion.div
-              className="absolute inset-0"
-              initial={{ opacity: 0, y: 40, x: 16 }}
-              animate={{ opacity: 1, y: 0, x: 0 }}
-              transition={{ duration: 0.8, ease: EASE, delay: 0.35 }}
-            >
-              <Phone />
-            </motion.div>
-          </div>
+          <DeviceScene scale={scale} />
         </div>
       </div>
 

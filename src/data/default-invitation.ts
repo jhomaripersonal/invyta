@@ -1,5 +1,6 @@
 import type { InvitationConfig, InvitationSectionType } from "../types/models";
 import { EVENT_CATEGORIES } from "./event-categories";
+import { categoryProfile } from "./category-profiles";
 import type { TemplateDesign } from "./landing-template-previews";
 
 export interface DefaultInvitationSeed {
@@ -37,23 +38,29 @@ const ENABLED_BY_DEFAULT: InvitationSectionType[] = ["cover", "countdown", "deta
 // With a template design (the one the organizer picked in the Create Event
 // wizard), the invitation starts with that template's look and section
 // set instead of the plain defaults — the event's own details fill the
-// content either way.
+// content either way. The starting copy comes from the event's category
+// profile (src/data/category-profiles.ts).
 export function createDefaultInvitation(seed: DefaultInvitationSeed, design?: TemplateDesign): InvitationConfig {
   const categoryLabel = EVENT_CATEGORIES.find((c) => c.id === seed.category)?.label ?? seed.category;
+  const profile = categoryProfile(seed.category);
+  // A template's own copy lines were written for its category — any
+  // template can be picked for any event, and a wedding template's "Will
+  // you celebrate with us?" has no place on a seminar or a wake.
+  const templateCopy = design?.category === seed.category ? design : undefined;
 
   const contentByType: Record<InvitationSectionType, Record<string, unknown>> = {
     cover: {
       ...(design ? { style: design.coverStyle } : {}),
       title: seed.name,
-      subtitle: `You're invited to celebrate this ${categoryLabel.toLowerCase()}`,
-      hostLine: seed.host ? `Hosted by ${seed.host}` : "",
+      subtitle: profile.coverSubtitle.replace("{category}", categoryLabel.toLowerCase()),
+      hostLine: seed.host ? profile.hostLine.replace("{host}", seed.host) : "",
     },
     countdown: {},
     details: {
       description: seed.description ?? "",
     },
     story: {
-      heading: design?.storyHeading ?? "Our Story",
+      heading: templateCopy?.storyHeading ?? profile.sections.story.heading,
       body: "",
     },
     schedule: {
@@ -69,7 +76,7 @@ export function createDefaultInvitation(seed: DefaultInvitationSeed, design?: Te
     },
     // Pro: up to 3 YouTube/Vimeo/Facebook links (see src/lib/video-embed.ts).
     video: {
-      heading: "Our Film",
+      heading: profile.sections.video.heading,
       videos: [] as { url: string; title: string }[],
     },
     dress_code: {
@@ -86,7 +93,7 @@ export function createDefaultInvitation(seed: DefaultInvitationSeed, design?: Te
       items: [] as { question: string; answer: string }[],
     },
     rsvp: {
-      prompt: design?.rsvpPrompt ?? "Will you celebrate with us?",
+      prompt: templateCopy?.rsvpPrompt ?? profile.rsvp.prompt,
     },
   };
 
@@ -96,7 +103,7 @@ export function createDefaultInvitation(seed: DefaultInvitationSeed, design?: Te
     contentByType[type as InvitationSectionType] = { ...contentByType[type as InvitationSectionType], style };
   }
 
-  const enabled = design?.enabledSections ?? ENABLED_BY_DEFAULT;
+  const enabled = (design?.enabledSections ?? ENABLED_BY_DEFAULT).filter((type) => !profile.offByDefault.includes(type));
 
   return {
     sections: SECTION_ORDER.map((type, index) => ({

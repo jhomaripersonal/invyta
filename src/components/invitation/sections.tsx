@@ -18,6 +18,7 @@ import type { ResolvedTheme } from "./theme";
 import { alignClass, buttonRadiusClass, buttonStyleProps, inkOnWhite, isEditorial, measureClass } from "./theme";
 import { coverStyle } from "../../data/page-layouts";
 import { sectionStyle } from "../../data/section-styles";
+import { categoryProfile, type SectionCopy } from "../../data/category-profiles";
 import { categoryLabel, eventDateTime, formatLongDate, formatTime } from "./format";
 import type { InvitationSectionType } from "../../types/models";
 import { VIDEO_PLAY_EVENT } from "./media-events";
@@ -154,6 +155,21 @@ function SectionHeading({ children, theme }: { children: ReactNode; theme: Resol
 function Accent({ children, theme }: { children: ReactNode; theme: ResolvedTheme }) {
   return (
     <span style={{ fontStyle: "italic", color: theme.palette.primary }}>{children}</span>
+  );
+}
+
+// What this section is called for the event's category (see
+// src/data/category-profiles.ts).
+function sectionCopy(event: EventRecord, type: InvitationSectionType): SectionCopy {
+  return categoryProfile(event.category).sections[type];
+}
+
+function CopyHeading({ copy, theme }: { copy: SectionCopy; theme: ResolvedTheme }) {
+  return (
+    <SectionHeading theme={theme}>
+      {copy.heading}
+      {copy.accent && <>{" "}<Accent theme={theme}>{copy.accent}</Accent></>}
+    </SectionHeading>
   );
 }
 
@@ -551,12 +567,12 @@ export function CountdownSection({ content, event, theme }: SectionProps) {
 }
 
 // ─── Details ────────────────────────────────────────────────────────────
-export function DetailsSection({ content, theme, index }: SectionProps) {
+export function DetailsSection({ content, event, theme, index }: SectionProps) {
   const description = str(content, "description");
   if (!description) return null;
   return (
     <div className={`px-6 py-10 ${alignClass(theme)}`}>
-      <Eyebrow label="The Details" index={index} theme={theme} />
+      <Eyebrow label={sectionCopy(event, "details").eyebrow} index={index} theme={theme} />
       <p className={`text-base leading-relaxed ${measureClass(theme)}`} style={{ fontFamily: theme.fonts.headingFont, fontStyle: "italic", color: theme.palette.text, opacity: 0.9 }}>
         {description}
       </p>
@@ -569,7 +585,8 @@ export function DetailsSection({ content, theme, index }: SectionProps) {
 // "photo" with the text beside the section's own photo (falling back to
 // the event's cover photo) once there's room, stacked above it otherwise.
 export function StorySection({ content, event, theme, index }: SectionProps) {
-  const heading = str(content, "heading", "Our Story");
+  const copy = sectionCopy(event, "story");
+  const heading = str(content, "heading", copy.heading);
   const body = str(content, "body");
   if (!body) return null;
   const style = sectionStyle("story", content);
@@ -577,7 +594,7 @@ export function StorySection({ content, event, theme, index }: SectionProps) {
   if (style === "quote") {
     return (
       <div className={`px-6 py-12 ${alignClass(theme)}`}>
-        <Eyebrow label="Our Story" index={index} theme={theme} />
+        <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
         <div className={`relative ${isEditorial(theme) ? "max-w-md" : "max-w-sm mx-auto"}`}>
           <span className="block text-[72px] leading-[0.6] mb-2" style={{ fontFamily: theme.fonts.headingFont, color: theme.palette.primary, opacity: 0.5 }} aria-hidden="true">
             &ldquo;
@@ -606,7 +623,7 @@ export function StorySection({ content, event, theme, index }: SectionProps) {
             <img src={photo} alt="" className="w-full h-full object-cover" {...LAZY_IMG} />
           </motion.div>
           <div className="text-left">
-            <Eyebrow label="Our Story" index={index} theme={theme} />
+            <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
             <h3 className="text-[28px] leading-tight mb-4" style={{ fontFamily: theme.fonts.headingFont, color: theme.palette.text }}>{heading}</h3>
             <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: theme.palette.text, opacity: 0.85 }}>{body}</p>
           </div>
@@ -617,7 +634,7 @@ export function StorySection({ content, event, theme, index }: SectionProps) {
 
   return (
     <div className={`px-6 py-10 ${alignClass(theme)}`}>
-      <Eyebrow label="Our Story" index={index} theme={theme} />
+      <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
       <SectionHeading theme={theme}>{heading}</SectionHeading>
       <p className={`text-sm leading-relaxed whitespace-pre-line text-left ${measureClass(theme)}`} style={{ color: theme.palette.text, opacity: 0.85 }}>{body}</p>
     </div>
@@ -627,16 +644,17 @@ export function StorySection({ content, event, theme, index }: SectionProps) {
 // ─── Schedule ───────────────────────────────────────────────────────────
 // Styles: "timeline" (original), "list" with times in a column, "cards"
 // with each item on its own card (two across once there's room).
-export function ScheduleSection({ content, theme, index }: SectionProps) {
+export function ScheduleSection({ content, event, theme, index }: SectionProps) {
   const items = list<{ time?: string; title?: string; description?: string }>(content, "items");
   if (items.length === 0) return null;
   const style = sectionStyle("schedule", content);
+  const copy = sectionCopy(event, "schedule");
 
   return (
     <div className="px-6 py-10">
       <div className={alignClass(theme)}>
-        <Eyebrow label="Timeline" index={index} theme={theme} />
-        <SectionHeading theme={theme}>Order of the <Accent theme={theme}>day</Accent></SectionHeading>
+        <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+        <CopyHeading copy={copy} theme={theme} />
       </div>
 
       {style === "list" && (
@@ -731,6 +749,7 @@ export function VenueSection({ content, event, theme, index }: SectionProps) {
   const address = str(content, "address");
   if (!name && !address) return null;
   const style = sectionStyle("venue", content);
+  const copy = sectionCopy(event, "venue");
   const query = encodeURIComponent([name, address].filter(Boolean).join(", "));
   const mapUrl = str(content, "mapUrl") || `https://www.google.com/maps/search/?api=1&query=${query}`;
 
@@ -742,7 +761,7 @@ export function VenueSection({ content, event, theme, index }: SectionProps) {
           <img src={photo} alt={name} className="absolute inset-0 w-full h-full object-cover" {...LAZY_IMG} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(20,16,14,0.85) 25%, rgba(20,16,14,0.1) 100%)" }} />
           <div className="relative p-6 w-full">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2" style={{ color: "rgba(255,255,255,0.7)" }}>The Venue</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2" style={{ color: "rgba(255,255,255,0.7)" }}>{copy.eyebrow}</p>
             {name && <div className="text-2xl leading-tight mb-1" style={{ fontFamily: theme.fonts.headingFont, color: "#FFFFFF" }}>{name}</div>}
             {address && <div className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.8)" }}>{address}</div>}
             <DirectionsButton mapUrl={mapUrl} theme={theme} light />
@@ -755,8 +774,8 @@ export function VenueSection({ content, event, theme, index }: SectionProps) {
   if (style === "card") {
     return (
       <div className={`px-6 py-10 ${alignClass(theme)}`}>
-        <Eyebrow label="The Venue" index={index} theme={theme} />
-        <SectionHeading theme={theme}>Where we <Accent theme={theme}>gather</Accent></SectionHeading>
+        <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+        <CopyHeading copy={copy} theme={theme} />
         <div
           className={`flex gap-4 items-start text-left p-5 max-w-sm ${isEditorial(theme) ? "" : "mx-auto"} ${buttonRadiusClass(theme.buttonStyle)}`}
           style={{ border: `1px solid ${theme.palette.primary}40`, backgroundColor: `${theme.palette.primary}0A` }}
@@ -775,8 +794,8 @@ export function VenueSection({ content, event, theme, index }: SectionProps) {
   if (style === "map") {
     return (
       <div className={`px-6 py-10 ${alignClass(theme)}`}>
-        <Eyebrow label="The Venue" index={index} theme={theme} />
-        <SectionHeading theme={theme}>Where we <Accent theme={theme}>gather</Accent></SectionHeading>
+        <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+        <CopyHeading copy={copy} theme={theme} />
         {name && <div className="text-base font-medium mb-1" style={{ color: theme.palette.text }}>{name}</div>}
         {address && <div className="text-sm mb-5" style={{ color: theme.palette.text, opacity: 0.7 }}>{address}</div>}
         <div className={`overflow-hidden aspect-[4/3] mb-5 ${buttonRadiusClass(theme.buttonStyle)}`} style={{ border: divider(theme) }}>
@@ -796,8 +815,8 @@ export function VenueSection({ content, event, theme, index }: SectionProps) {
 
   return (
     <div className={`px-6 py-10 ${alignClass(theme)}`}>
-      <Eyebrow label="The Venue" index={index} theme={theme} />
-      <SectionHeading theme={theme}>Where we <Accent theme={theme}>gather</Accent></SectionHeading>
+      <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+      <CopyHeading copy={copy} theme={theme} />
       {name && <div className="text-base font-medium mb-1" style={{ color: theme.palette.text }}>{name}</div>}
       {address && <div className="text-sm mb-5" style={{ color: theme.palette.text, opacity: 0.7 }}>{address}</div>}
       <DirectionsButton mapUrl={mapUrl} theme={theme} />
@@ -821,19 +840,20 @@ function photoReveal(i: number) {
   } as const;
 }
 
-export function GallerySection({ content, theme, index }: SectionProps) {
+export function GallerySection({ content, event, theme, index }: SectionProps) {
   const [openAt, setOpenAt] = useState<number | null>(null);
   const imageUrls = list<string>(content, "imageUrls").filter(Boolean);
   if (imageUrls.length === 0) return null;
   const layout = galleryLayout(content);
   const filterStyle = galleryFilterStyle(galleryFilter(content));
   const radius = theme.buttonStyle === "square" ? "rounded-none" : "rounded-xl";
+  const copy = sectionCopy(event, "gallery");
 
   return (
     <div className="px-6 py-10">
       <div className={alignClass(theme)}>
-        <Eyebrow label="Gallery" index={index} theme={theme} />
-        <SectionHeading theme={theme}>A few of our <Accent theme={theme}>favorites</Accent></SectionHeading>
+        <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+        <CopyHeading copy={copy} theme={theme} />
       </div>
 
       {layout === "masonry" && (
@@ -1157,12 +1177,13 @@ function VideoPlayer({ embed, title, poster, theme }: { embed: VideoEmbed; title
 export function VideoSection({ content, event, theme, index }: SectionProps) {
   const videos = videosFor(content);
   if (videos.length === 0 || !planAllows(event.ownerPlan, "video")) return null;
-  const heading = str(content, "heading", "Our Film");
+  const copy = sectionCopy(event, "video");
+  const heading = str(content, "heading", copy.heading);
   const poster = `https://images.unsplash.com/${event.imageUrl}?w=960&h=540&fit=crop&auto=format`;
   return (
     <div className="px-6 py-10">
       <div className={alignClass(theme)}>
-        <Eyebrow label="Video" index={index} theme={theme} />
+        <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
         <SectionHeading theme={theme}>{heading}</SectionHeading>
       </div>
       <div className="space-y-6">
@@ -1177,13 +1198,14 @@ export function VideoSection({ content, event, theme, index }: SectionProps) {
 }
 
 // ─── Dress code ─────────────────────────────────────────────────────────
-export function DressCodeSection({ content, theme, index }: SectionProps) {
+export function DressCodeSection({ content, event, theme, index }: SectionProps) {
   const description = str(content, "description");
   if (!description) return null;
+  const copy = sectionCopy(event, "dress_code");
   return (
     <div className={`px-6 py-10 ${alignClass(theme)}`}>
-      <Eyebrow label="Dress Code" index={index} theme={theme} />
-      <SectionHeading theme={theme}>What to <Accent theme={theme}>wear</Accent></SectionHeading>
+      <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+      <CopyHeading copy={copy} theme={theme} />
       <p className={`text-sm leading-relaxed ${measureClass(theme)}`} style={{ color: theme.palette.text, opacity: 0.85 }}>{description}</p>
     </div>
   );
@@ -1264,11 +1286,12 @@ export function normalizeEntourageGroups(raw: EntourageGroup[]): NormalizedEntou
   return out;
 }
 
-export function EntourageSection({ content, theme, index }: SectionProps) {
+export function EntourageSection({ content, event, theme, index }: SectionProps) {
   const groups = normalizeEntourageGroups(list<EntourageGroup>(content, "groups"));
   if (groups.length === 0) return null;
 
-  const heading = str(content, "heading", "The entourage");
+  const copy = sectionCopy(event, "entourage");
+  const heading = str(content, "heading", copy.heading);
   // Font overrides — set from the Builder's font picker. `font` applies to
   // the whole section; `headingFont` / `namesFont` override it for their
   // role. All optional; anything unset falls through to the theme fonts.
@@ -1279,7 +1302,7 @@ export function EntourageSection({ content, theme, index }: SectionProps) {
   return (
     <div className="px-6 py-10">
       <div className={alignClass(theme)}>
-        <Eyebrow label="Entourage" index={index} theme={theme} />
+        <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
         <h3
           className={isEditorial(theme) ? "text-[34px] leading-[1.1] text-left mb-6" : "text-[26px] leading-tight text-center mb-5"}
           style={{ fontFamily: headingFont, color: theme.palette.text }}
@@ -1359,14 +1382,15 @@ function EntourageGroupBlock({
 }
 
 // ─── Gift registry ──────────────────────────────────────────────────────
-export function GiftRegistrySection({ content, theme, index }: SectionProps) {
+export function GiftRegistrySection({ content, event, theme, index }: SectionProps) {
   const message = str(content, "message");
   const links = list<{ label?: string; url?: string }>(content, "links").filter((l) => l.url);
   if (!message && links.length === 0) return null;
+  const copy = sectionCopy(event, "gift_registry");
   return (
     <div className={`px-6 py-10 ${alignClass(theme)}`}>
-      <Eyebrow label="Gift Registry" index={index} theme={theme} />
-      <SectionHeading theme={theme}>With <Accent theme={theme}>love</Accent></SectionHeading>
+      <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+      <CopyHeading copy={copy} theme={theme} />
       {message && <p className={`text-sm mb-5 ${measureClass(theme)}`} style={{ color: theme.palette.text, opacity: 0.85 }}>{message}</p>}
       <div className={`flex flex-col gap-2 ${isEditorial(theme) ? "items-start" : "items-center"}`}>
         {links.map((l, i) => (
@@ -1387,13 +1411,14 @@ export function GiftRegistrySection({ content, theme, index }: SectionProps) {
 }
 
 // ─── FAQ ────────────────────────────────────────────────────────────────
-export function FaqSection({ content, theme, index }: SectionProps) {
+export function FaqSection({ content, event, theme, index }: SectionProps) {
   const items = list<{ question?: string; answer?: string }>(content, "items").filter((i) => i.question);
   if (items.length === 0) return null;
+  const copy = sectionCopy(event, "faq");
   return (
     <div className={`px-6 py-10 ${alignClass(theme)}`}>
-      <Eyebrow label="Questions" index={index} theme={theme} />
-      <SectionHeading theme={theme}>Good to <Accent theme={theme}>know</Accent></SectionHeading>
+      <Eyebrow label={copy.eyebrow} index={index} theme={theme} />
+      <CopyHeading copy={copy} theme={theme} />
       <div className="text-left">
         {items.map((item, i) => (
           <div key={i} className="py-3.5" style={i > 0 ? { borderTop: divider(theme) } : undefined}>
@@ -1410,8 +1435,9 @@ export function FaqSection({ content, theme, index }: SectionProps) {
 // checkmark that draws itself in, ringed by a quick burst of theme-colored
 // confetti dots. Declines skip this (a burst felt tonally wrong there);
 // they still get the plain "thanks for letting us know" text below.
-function RsvpSuccessBurst({ theme }: { theme: ResolvedTheme }) {
-  const dotCount = 10;
+// Memorial events keep the checkmark but not the confetti.
+function RsvpSuccessBurst({ theme, confetti }: { theme: ResolvedTheme; confetti: boolean }) {
+  const dotCount = confetti ? 10 : 0;
   const colors = [theme.palette.primary, theme.palette.accent, theme.palette.text];
 
   return (
@@ -1485,7 +1511,8 @@ export function RsvpSection({ content, event, theme, interactive = true, onEvent
   const { submitRsvp, getGuestPublic, updateGuestRsvp } = useGuests();
   const { getEventBySlug } = useEvents();
 
-  const prompt = str(content, "prompt", "Will you celebrate with us?");
+  const profile = categoryProfile(event.category);
+  const prompt = str(content, "prompt", profile.rsvp.prompt);
   const settings = rsvpSettings(content);
   const closed = rsvpClosed(settings);
   // Questions are Pro; below it the database drops answers anyway, so
@@ -1610,13 +1637,13 @@ export function RsvpSection({ content, event, theme, interactive = true, onEvent
   if (stage === "done") {
     return (
       <div className="text-center py-6">
-        {attending && <RsvpSuccessBurst theme={theme} />}
+        {attending && <RsvpSuccessBurst theme={theme} confetti={profile.celebratory} />}
         <Eyebrow label="RSVP" theme={theme} />
         <h3 className="text-2xl mb-2" style={{ fontFamily: theme.fonts.headingFont, color: theme.palette.text }}>
-          {attending ? "You're on the guest list" : "Thanks for letting us know"}
+          {attending ? profile.rsvp.confirmedTitle : profile.rsvp.declinedTitle}
         </h3>
         <p className="text-sm mb-2" style={{ color: theme.palette.text, opacity: 0.7 }}>
-          {attending ? "We can't wait to celebrate with you." : "We'll miss you, but we appreciate the heads up."}
+          {attending ? profile.rsvp.confirmedBody : profile.rsvp.declinedBody}
         </p>
         {attending && <AddToCalendar event={event} theme={theme} />}
         {demo && (
@@ -1711,7 +1738,7 @@ export function RsvpSection({ content, event, theme, interactive = true, onEvent
           )}
         </div>
       ))}
-      <textarea placeholder="Message for the host (optional)" value={message} onChange={(e) => setMessage(e.target.value)} rows={3} maxLength={1000} className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none" style={inputStyle} />
+      <textarea placeholder={profile.rsvp.messagePlaceholder} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} maxLength={1000} className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none" style={inputStyle} />
       {/* Honeypot — hidden from people and screen readers, skipped by Tab. */}
       <input
         type="text"

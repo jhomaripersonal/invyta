@@ -26,6 +26,8 @@ const PaymentReturnPage = lazy(() => import("./pages/PaymentReturn"));
 const ContactPage = lazy(() => import("./pages/Contact"));
 const AboutPage = lazy(() => import("./pages/About"));
 const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
+// Launch post images (dev only — not part of production builds).
+const LaunchMockupPage = import.meta.env.DEV ? lazy(() => import("./pages/LaunchMockup")) : null;
 
 type NavTarget = "landing" | "dashboard" | "login" | "register";
 
@@ -97,6 +99,7 @@ export default function App() {
                     }
                   />
                   <Route path="/terms" element={<TermsPage />} />
+                  {LaunchMockupPage && <Route path="/launch-mockup" element={<LaunchMockupPage />} />}
                   <Route path="/i/:slug" element={<PublicInvitationPage />} />
                   <Route path="/i/:slug/g/:guestId" element={<PublicInvitationPage />} />
                   <Route

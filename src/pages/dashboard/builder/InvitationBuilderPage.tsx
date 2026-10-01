@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEvents, type EventRecord } from "../../../lib/events-store";
 import type { InvitationConfig, InvitationSectionType } from "../../../types/models";
-import { SectionList, SECTION_LABELS } from "../../../components/invitation/SectionList";
+import { SectionList } from "../../../components/invitation/SectionList";
+import { categoryProfile } from "../../../data/category-profiles";
 import { useScrollportHeight } from "../../../components/invitation/useScrollportHeight";
 import { SectionSidebar } from "./SectionSidebar";
 import { ContentForm } from "./ContentForms";
@@ -202,19 +203,20 @@ export default function InvitationBuilderPage() {
 
   const selectedSection = config.sections.find((s) => s.type === selected);
   const isPublished = event.status === "published";
+  const selectedName = selectedSection && categoryProfile(event.category).sections[selectedSection.type].name;
 
   // Shared between the desktop side panels and the mobile bottom sheet.
   const editPanel = selectedSection ? (
     <div>
-      <p className="text-sm font-semibold mb-4" style={{ color: T.charcoal }}>{SECTION_LABELS[selectedSection.type]}</p>
-      <ContentForm type={selectedSection.type} content={selectedSection.content} onChange={(content) => updateSectionContent(selectedSection.type, content)} eventId={event.id} />
+      <p className="text-sm font-semibold mb-4" style={{ color: T.charcoal }}>{selectedName}</p>
+      <ContentForm type={selectedSection.type} content={selectedSection.content} onChange={(content) => updateSectionContent(selectedSection.type, content)} eventId={event.id} category={event.category} />
     </div>
   ) : (
     <p className="text-xs" style={{ color: T.muted }}>Select a section to edit its content.</p>
   );
   const designPanel = <DesignPanel config={config} onChange={setConfig} category={event.category} eventId={event.id} />;
   const sectionList = (onPick: (t: InvitationSectionType) => void) => (
-    <SectionSidebar sections={config.sections} selected={selected} onSelect={onPick} onToggle={toggleSection} onReorder={reorderSections} />
+    <SectionSidebar sections={config.sections} category={event.category} selected={selected} onSelect={onPick} onToggle={toggleSection} onReorder={reorderSections} />
   );
 
   return (
@@ -334,7 +336,7 @@ export default function InvitationBuilderPage() {
         <nav className="lg:hidden flex-shrink-0 grid grid-cols-3 sm:grid-cols-2" style={{ backgroundColor: T.white, borderTop: `1px solid ${T.border}` }}>
           {([
             ["sections", "Sections", "sm:hidden"],
-            ["edit", selectedSection ? `Edit ${SECTION_LABELS[selectedSection.type]}` : "Edit", ""],
+            ["edit", selectedName ? `Edit ${selectedName}` : "Edit", ""],
             ["design", "Design", ""],
           ] as const).map(([id, label, hide]) => (
             <button

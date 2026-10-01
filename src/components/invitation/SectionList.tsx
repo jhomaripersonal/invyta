@@ -4,6 +4,7 @@ import type { EventRecord } from "../../lib/events-store";
 import type { InvitationConfig, InvitationSection, InvitationSectionType } from "../../types/models";
 import { buttonRadiusClass, buttonStyleProps, resolveTheme, type ResolvedTheme } from "./theme";
 import { formatLongDate, formatTime } from "./format";
+import { categoryProfile, type SectionCopy } from "../../data/category-profiles";
 import {
   CoverSection,
   CountdownSection,
@@ -36,22 +37,6 @@ const RENDERERS: Record<InvitationSectionType, (props: SectionProps) => ReactEle
   gift_registry: GiftRegistrySection,
   faq: FaqSection,
   rsvp: RsvpSection,
-};
-
-export const SECTION_LABELS: Record<InvitationSectionType, string> = {
-  cover: "Cover",
-  countdown: "Countdown",
-  details: "Details",
-  story: "Story",
-  schedule: "Schedule",
-  venue: "Venue",
-  gallery: "Gallery",
-  video: "Video",
-  dress_code: "Dress Code",
-  entourage: "Entourage",
-  gift_registry: "Gift Registry",
-  faq: "FAQ",
-  rsvp: "RSVP",
 };
 
 interface SectionListProps {
@@ -116,6 +101,8 @@ const PAPER_GRAIN =
 
 export function SectionList({ invitation, event, interactive = true, onEventUpdated, highlightType, guestId, demo = false, showWatermark = true, screenHeight = "100svh", site = false }: SectionListProps) {
   const theme = resolveTheme(invitation.theme);
+  // Section names follow the event's category (a wake's Story is "Tribute").
+  const copy = categoryProfile(event.category).sections;
   // Per-instance prefix for section anchors, so two invitations on one page
   // (e.g. a preview modal over the landing page) never share ids.
   const anchorPrefix = `inv-${useId().replace(/:/g, "")}`;
@@ -218,7 +205,7 @@ export function SectionList({ invitation, event, interactive = true, onEventUpda
     // only sections with something to show get a panel, so an empty one
     // never leaves a blank screen.
     const visible = planned.filter((p) => p.willRender);
-    body = <StoryPanels items={visible} theme={theme} highlight={highlight} renderContent={renderContent} />;
+    body = <StoryPanels items={visible} theme={theme} copy={copy} highlight={highlight} renderContent={renderContent} />;
     footerBg = visible.length % 2 === 0 ? theme.palette.surface : theme.palette.background;
   } else if (theme.layout === "split" && cover) {
     // Wide screens: the cover stays pinned in the left column while the
@@ -243,7 +230,7 @@ export function SectionList({ invitation, event, interactive = true, onEventUpda
   const coverTitle = (typeof cover?.section.content.title === "string" && cover.section.content.title.trim()) || event.name;
   const navLinks = planned
     .filter((p) => p.willRender && NAV_TYPES.includes(p.section.type))
-    .map((p) => ({ id: anchorId(p.section.type), label: NAV_LABELS[p.section.type] ?? SECTION_LABELS[p.section.type] }));
+    .map((p) => ({ id: anchorId(p.section.type), label: copy[p.section.type].short ?? copy[p.section.type].name }));
   const hasRsvp = planned.some((p) => p.section.type === "rsvp");
   const topId = anchorId(cover ? "cover" : planned[0]?.section.type ?? "cover");
 
@@ -275,9 +262,10 @@ export function SectionList({ invitation, event, interactive = true, onEventUpda
 // Story layout: full-height panels with alternating backgrounds, a
 // stronger entrance per panel, and a progress rail of dots pinned to the
 // right edge that tracks which panel is on screen (tap a dot to jump).
-function StoryPanels({ items, theme, highlight, renderContent }: {
+function StoryPanels({ items, theme, copy, highlight, renderContent }: {
   items: PlannedSection[];
   theme: ResolvedTheme;
+  copy: Record<InvitationSectionType, SectionCopy>;
   highlight: (type: InvitationSectionType) => CSSProperties | undefined;
   renderContent: (item: PlannedSection, fill?: SectionProps["fill"]) => ReactNode;
 }) {
@@ -331,7 +319,7 @@ function StoryPanels({ items, theme, highlight, renderContent }: {
               <button
                 key={item.section.type}
                 type="button"
-                aria-label={`Go to ${SECTION_LABELS[item.section.type]}`}
+                aria-label={`Go to ${copy[item.section.type].name}`}
                 onClick={() => panelRefs.current[i]?.scrollIntoView({ behavior: "smooth" })}
                 className="w-1.5 rounded-full transition-all"
                 style={{ height: i === active ? 18 : 6, backgroundColor: theme.palette.primary, opacity: i === active ? 0.9 : 0.35 }}
@@ -425,18 +413,6 @@ function Watermark({ interactive, theme }: { interactive: boolean; theme: Resolv
 // Sections worth a link in the top bar (cover/countdown/rsvp are the page
 // itself, the hero, and the call to action).
 const NAV_TYPES: InvitationSectionType[] = ["details", "story", "schedule", "venue", "gallery", "video", "entourage", "dress_code", "gift_registry", "faq"];
-const NAV_LABELS: Partial<Record<InvitationSectionType, string>> = {
-  details: "Details",
-  story: "Story",
-  schedule: "Schedule",
-  venue: "Venue",
-  gallery: "Gallery",
-  video: "Video",
-  entourage: "Entourage",
-  dress_code: "Dress Code",
-  gift_registry: "Registry",
-  faq: "FAQ",
-};
 
 export const SITE_NAV_HEIGHT = 56;
 
