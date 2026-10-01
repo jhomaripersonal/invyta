@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { EventRecord } from "../../lib/events-store";
-import { startEventUpgrade } from "../../lib/payments";
+import { useEvents, type EventRecord } from "../../lib/events-store";
+import { redeemPromoCode, startEventUpgrade } from "../../lib/payments";
 import { PLAN_FEATURES, formatPeso, upgradePriceCentavos, type PaidPlan } from "../../data/pricing";
 import { planAllows, planLabel } from "../../data/plan-limits";
 import { T } from "../../lib/tokens";
@@ -11,13 +11,38 @@ const PLAN_RANK = { free: 0, premium: 1, pro: 2, event_planner: 3 } as const;
 // Upgrade ONE event (billing is per event). Picks Premium or Pro, shows
 // the price (only the difference if the event already has Premium), then
 // hands off to PayMongo's hosted checkout. The refund terms are stated
-// here, before paying, as the compliance addendum requires.
+// here, before paying, as the compliance addendum requires. A single-use
+// promo code (test launch) upgrades the event for free instead.
 export default function UpgradeEventModal({ event, onClose }: { event: EventRecord; onClose: () => void }) {
   const dialog = useDialog(onClose);
+  const { refresh } = useEvents();
   const options = (["premium", "pro"] as PaidPlan[]).filter((p) => PLAN_RANK[event.ownerPlan] < PLAN_RANK[p]);
   const [choice, setChoice] = useState<PaidPlan>(options.includes("premium") ? "premium" : "pro");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoError, setPromoError] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+  // Set once a code is applied; the success view stays even after the
+  // refreshed event no longer has any upgrade options.
+  const [redeemedPlan, setRedeemedPlan] = useState<PaidPlan | null>(null);
+
+  async function handleRedeem(e: React.FormEvent) {
+    e.preventDefault();
+    if (!promoCode.trim()) return;
+    setRedeeming(true);
+    setPromoError("");
+    try {
+      const plan = await redeemPromoCode(event.id, promoCode);
+      setRedeemedPlan(plan);
+      await refresh();
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : "Couldn't apply the promo code.");
+    } finally {
+      setRedeeming(false);
+    }
+  }
 
   async function handlePay() {
     setSubmitting(true);
@@ -38,6 +63,20 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
           <h2 id={dialog.titleId} className="text-lg font-bold" style={{ color: T.charcoal }}>Upgrade this event</h2>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100" style={{ color: T.muted }} aria-label="Close">✕</button>
         </div>
+
+        {redeemedPlan ? (
+          <div className="py-6 text-center">
+            <div className="text-3xl mb-2">🎉</div>
+            <p className="text-base font-semibold mb-1" style={{ color: T.charcoal }}>{planLabel(redeemedPlan)} unlocked</p>
+            <p className="text-sm mb-5" style={{ color: T.muted }}>
+              Promo code applied to <span className="font-semibold" style={{ color: T.charcoal }}>{event.name}</span>. All its {planLabel(redeemedPlan)} features are ready to use.
+            </p>
+            <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90" style={{ backgroundColor: T.accent, color: T.white }}>
+              Done
+            </button>
+          </div>
+        ) : (
+        <>
         <p className="text-sm mb-5" style={{ color: T.muted }}>
           <span className="font-semibold" style={{ color: T.charcoal }}>{event.name}</span> is on {planLabel(event.ownerPlan)}. Upgrades apply to this event only — a one-time payment, no subscription.
         </p>
@@ -95,7 +134,45 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
               published or sent to guests; non-refundable after that, except where the law requires otherwise. See our{" "}
               <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">Terms</a>.
             </p>
+
+            <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${T.border}` }}>
+              {promoOpen ? (
+                <form onSubmit={handleRedeem}>
+                  <label htmlFor="promo-code" className="block text-xs font-semibold mb-1.5" style={{ color: T.charcoal }}>Promo code</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="promo-code"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. BETA-XXXX"
+                      autoFocus
+                      autoComplete="off"
+                      spellCheck={false}
+                      maxLength={64}
+                      className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm outline-none tracking-wide"
+                      style={{ border: `1px solid ${promoError ? T.red : T.border}`, color: T.charcoal }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={redeeming || !promoCode.trim()}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+                      style={{ backgroundColor: T.charcoal, color: T.white }}
+                    >
+                      {redeeming ? "Applying..." : "Apply"}
+                    </button>
+                  </div>
+                  {promoError && <p className="text-xs mt-2" style={{ color: T.red }}>{promoError}</p>}
+                  <p className="text-[11px] mt-2" style={{ color: T.muted }}>Each code works once, for one event only.</p>
+                </form>
+              ) : (
+                <button onClick={() => setPromoOpen(true)} className="text-xs font-semibold underline" style={{ color: T.muted }}>
+                  Have a promo code?
+                </button>
+              )}
+            </div>
           </>
+        )}
+        </>
         )}
       </div>
     </div>

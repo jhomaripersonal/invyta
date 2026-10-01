@@ -19,6 +19,7 @@ import { customLinkChecks } from "./checks/custom-links.mjs";
 import { videoChecks } from "./checks/video.mjs";
 import { rsvpProtectionChecks } from "./checks/rsvp-protection.mjs";
 import { guestToolsChecks } from "./checks/guest-tools.mjs";
+import { promoCodeChecks } from "./checks/promo-codes.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const read = (p) => readFileSync(here(p), "utf8");
@@ -42,6 +43,7 @@ const PATCH_ORDER = [
   "add-guest-tools",
   "add-background-music",
   "add-priority-support",
+  "add-promo-codes",
 ];
 
 const STUBS = `
@@ -187,10 +189,11 @@ async function scenario(name, setup) {
   await videoChecks(db, { one, check, expectError, asUser, asServer });
   await rsvpProtectionChecks(db, { one, check, asUser, asServer });
   await guestToolsChecks(db, { one, check, expectError, asUser, asServer });
+  await promoCodeChecks(db, { one, check, expectError, asUser, asServer });
 
   // ── retention on deletion ──
   await db.exec(`delete from auth.users where id = '${uid}'`);
-  const kept = await one(db, `select count(*)::int as n, count(user_id)::int as with_user from public.payments`);
+  const kept = await one(db, `select count(*)::int as n, count(user_id)::int as with_user from public.payments where provider = 'paymongo'`);
   check("payments survive account deletion with user_id nulled", kept.n === 3 && kept.with_user === 0, JSON.stringify(kept));
 }
 

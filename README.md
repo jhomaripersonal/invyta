@@ -20,7 +20,7 @@ This repo is the frontend prototype originating from Figma Make. The backend is 
 4. Under Authentication → URL Configuration → **Redirect URLs**, add `https://<your-domain>/dashboard` (and `http://localhost:8443/dashboard` for local development). Google sign-in and the email-confirmation link return there; an address not on this list falls back to the Site URL.
 5. For link previews of the site itself, the share image (`public/og-image.jpg`) needs an absolute URL: on Vercel it's built from the production domain automatically (`VERCEL_PROJECT_PRODUCTION_URL`); elsewhere set `SITE_URL=https://your-domain` at build time.
 
-**Already have a project from before these patches?** Instead of re-running `schema.sql`, run these in the SQL Editor, in order: `add-free-plan-limits.sql`, `update-premium-templates.sql`, `add-gallery-styles.sql`, `add-account-deletion.sql`, `add-page-layouts.sql`, `add-section-styles.sql`, `add-payments.sql`, `add-admin.sql`, `add-testimonials.sql`, `add-admin-premium.sql`, `add-custom-links.sql`, `add-video.sql`, `add-rsvp-protection.sql`, `add-guest-tools.sql`, `add-background-music.sql`, `add-priority-support.sql`.
+**Already have a project from before these patches?** Instead of re-running `schema.sql`, run these in the SQL Editor, in order: `add-free-plan-limits.sql`, `update-premium-templates.sql`, `add-gallery-styles.sql`, `add-account-deletion.sql`, `add-page-layouts.sql`, `add-section-styles.sql`, `add-payments.sql`, `add-admin.sql`, `add-testimonials.sql`, `add-admin-premium.sql`, `add-custom-links.sql`, `add-video.sql`, `add-rsvp-protection.sql`, `add-guest-tools.sql`, `add-background-music.sql`, `add-priority-support.sql`, `add-promo-codes.sql`.
 
 ### Admin portal
 
@@ -49,6 +49,7 @@ supabase secrets set PAYMONGO_PAYMENT_METHODS=gcash,paymaya,card   # optional; o
 supabase functions deploy create-checkout
 supabase functions deploy confirm-checkout
 supabase functions deploy paymongo-webhook --no-verify-jwt   # PayMongo can't send a Supabase JWT; its signature is checked instead
+supabase functions deploy redeem-promo
 ```
 
 Then register the webhook with PayMongo (dashboard → Developers → Webhooks, or the API) for the event **`checkout_session.payment.paid`** at `https://<your-project-ref>.supabase.co/functions/v1/paymongo-webhook`, and store the signing secret it gives you:

@@ -21,6 +21,7 @@
     "deno-shim.d.ts",
     "../../supabase/functions/create-checkout/index.ts",
     "../../supabase/functions/confirm-checkout/index.ts",
-    "../../supabase/functions/paymongo-webhook/index.ts"
+    "../../supabase/functions/paymongo-webhook/index.ts",
+    "../../supabase/functions/redeem-promo/index.ts"
   ]
 }

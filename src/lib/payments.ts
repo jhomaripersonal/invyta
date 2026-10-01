@@ -24,6 +24,15 @@ export async function startEventUpgrade(eventId: string, plan: PaidPlan): Promis
   window.location.assign(data.checkoutUrl);
 }
 
+// Applies a single-use promo code to one event (redeem-promo Edge
+// Function). The server checks the code and applies the upgrade; on
+// success the caller should refresh events to pick up the new plan.
+export async function redeemPromoCode(eventId: string, code: string): Promise<PaidPlan> {
+  const { data, error } = await supabase.functions.invoke("redeem-promo", { body: { eventId, code: code.trim() } });
+  if (error || !data?.plan) throw await functionError(error, "Couldn't apply the promo code. Please try again.");
+  return data.plan;
+}
+
 export type PaymentStatus = Payment["status"];
 
 // Asks the server to check a payment with PayMongo (in case the webhook
@@ -42,7 +51,7 @@ type PaymentRow = {
   currency: "PHP";
   description: string;
   status: PaymentStatus;
-  provider: "paymongo";
+  provider: Payment["provider"];
   payment_method: string | null;
   paid_at: string | null;
   created_at: string;
@@ -69,5 +78,5 @@ export async function listPayments(): Promise<Payment[]> {
 
 export function paymentMethodLabel(method?: string): string {
   if (!method) return "—";
-  return { gcash: "GCash", paymaya: "Maya", card: "Card", grab_pay: "GrabPay", qrph: "QR Ph" }[method] ?? method;
+  return { gcash: "GCash", paymaya: "Maya", card: "Card", grab_pay: "GrabPay", qrph: "QR Ph", promo: "Promo code" }[method] ?? method;
 }
