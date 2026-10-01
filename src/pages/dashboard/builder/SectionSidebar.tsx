@@ -1,6 +1,6 @@
 import { Reorder, useDragControls } from "framer-motion";
-import type { InvitationSection, InvitationSectionType } from "../../../types/models";
-import { SECTION_LABELS } from "../../../components/invitation/SectionList";
+import type { EventCategory, InvitationSection, InvitationSectionType } from "../../../types/models";
+import { categoryProfile } from "../../../data/category-profiles";
 import { Icon } from "../../../components/Icon";
 import { useEventPlan } from "../../../lib/event-plan-context";
 import { planAllows } from "../../../data/plan-limits";
@@ -34,14 +34,17 @@ function GripIcon() {
 
 interface Props {
   sections: InvitationSection[];
+  // Sections are named for the event's category (see category-profiles.ts).
+  category: EventCategory;
   selected: InvitationSectionType | null;
   onSelect: (type: InvitationSectionType) => void;
   onToggle: (type: InvitationSectionType) => void;
   onReorder: (order: InvitationSectionType[]) => void;
 }
 
-export function SectionSidebar({ sections, selected, onSelect, onToggle, onReorder }: Props) {
+export function SectionSidebar({ sections, category, selected, onSelect, onToggle, onReorder }: Props) {
   const ordered = [...sections].sort((a, b) => a.order - b.order);
+  const copy = categoryProfile(category).sections;
 
   return (
     <Reorder.Group
@@ -54,6 +57,7 @@ export function SectionSidebar({ sections, selected, onSelect, onToggle, onReord
         <SectionRow
           key={section.type}
           section={section}
+          name={copy[section.type].name}
           active={selected === section.type}
           onSelect={() => onSelect(section.type)}
           onToggle={() => onToggle(section.type)}
@@ -65,11 +69,13 @@ export function SectionSidebar({ sections, selected, onSelect, onToggle, onReord
 
 function SectionRow({
   section,
+  name,
   active,
   onSelect,
   onToggle,
 }: {
   section: InvitationSection;
+  name: string;
   active: boolean;
   onSelect: () => void;
   onToggle: () => void;
@@ -95,7 +101,7 @@ function SectionRow({
         onPointerDown={(e) => controls.start(e)}
         className="w-4 h-6 flex-shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
         style={{ color: T.muted }}
-        aria-label={`Drag to reorder ${SECTION_LABELS[section.type]}`}
+        aria-label={`Drag to reorder ${name}`}
       >
         <GripIcon />
       </button>
@@ -106,7 +112,7 @@ function SectionRow({
           className="text-sm truncate"
           style={{ color: section.enabled ? T.charcoal : T.muted, fontWeight: active ? 600 : 500 }}
         >
-          {SECTION_LABELS[section.type]}
+          {name}
         </span>
         {lockedPro && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: T.accent, color: T.white }}>Pro</span>}
       </button>
@@ -114,7 +120,7 @@ function SectionRow({
       <button
         role="switch"
         aria-checked={section.enabled}
-        aria-label={`${section.enabled ? "Disable" : "Enable"} ${SECTION_LABELS[section.type]}`}
+        aria-label={`${section.enabled ? "Disable" : "Enable"} ${name}`}
         onClick={onToggle}
         className="w-7 h-4 rounded-full relative transition-colors ml-1 flex-shrink-0"
         style={{ backgroundColor: section.enabled ? T.accent : T.border }}

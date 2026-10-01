@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type ReactElement } from "react";
-import type { InvitationSectionType } from "../../../types/models";
+import type { EventCategory, InvitationSectionType } from "../../../types/models";
+import { categoryProfile } from "../../../data/category-profiles";
 import { useAuth } from "../../../lib/auth-context";
 import { useEventPlan } from "../../../lib/event-plan-context";
 import { uploadInvitationImage } from "../../../lib/storage";
@@ -293,7 +294,7 @@ const PROVIDER_LABEL: Record<VideoProvider, string> = { youtube: "YouTube", vime
 
 // Video (Pro): up to MAX_VIDEOS links, each recognized as it's pasted so
 // the organizer knows straight away whether it will play.
-function VideoField({ content, onChange }: { content: Content; onChange: OnChange }) {
+function VideoField({ content, onChange, defaultHeading }: { content: Content; onChange: OnChange; defaultHeading: string }) {
   const canUse = planAllows(useEventPlan(), "video");
   const videos = arr<{ url: string; title: string }>(content, "videos");
 
@@ -314,7 +315,7 @@ function VideoField({ content, onChange }: { content: Content; onChange: OnChang
 
   return (
     <div>
-      <TextField label="Heading" value={str(content, "heading") || "Our Film"} onChange={(v) => onChange({ ...content, heading: v })} />
+      <TextField label="Heading" value={str(content, "heading") || defaultHeading} onChange={(v) => onChange({ ...content, heading: v })} />
       {videos.map((v, i) => {
         const embed = v.url.trim() ? parseVideoUrl(v.url) : null;
         return (
@@ -663,7 +664,10 @@ function RepeatableList<T extends Record<string, string>>({
   );
 }
 
-export function ContentForm({ type, content, onChange, eventId }: { type: InvitationSectionType; content: Content; onChange: OnChange; eventId: string }) {
+export function ContentForm({ type, content, onChange, eventId, category }: { type: InvitationSectionType; content: Content; onChange: OnChange; eventId: string; category: EventCategory }) {
+  // Field labels and examples follow the event's category, like the
+  // section names do (see category-profiles.ts).
+  const profile = categoryProfile(category);
   switch (type) {
     case "cover":
       return (
@@ -672,7 +676,7 @@ export function ContentForm({ type, content, onChange, eventId }: { type: Invita
           <ImageUploadField label="Cover photo" value={str(content, "imageUrl")} onChange={(v) => onChange({ ...content, imageUrl: v })} eventId={eventId} />
           <TextField label="Title" value={str(content, "title")} onChange={(v) => onChange({ ...content, title: v })} />
           <TextField label="Subtitle" value={str(content, "subtitle")} onChange={(v) => onChange({ ...content, subtitle: v })} />
-          <TextField label="Host line" value={str(content, "hostLine")} onChange={(v) => onChange({ ...content, hostLine: v })} placeholder="Hosted by..." />
+          <TextField label="Host line" value={str(content, "hostLine")} onChange={(v) => onChange({ ...content, hostLine: v })} placeholder={profile.hostLine.replace("{host}", "...")} />
         </>
       );
     case "countdown":
@@ -692,7 +696,7 @@ export function ContentForm({ type, content, onChange, eventId }: { type: Invita
             <ImageUploadField label="Story photo (defaults to the cover photo)" value={str(content, "imageUrl")} onChange={(v) => onChange({ ...content, imageUrl: v })} eventId={eventId} />
           )}
           <TextField label="Heading" value={str(content, "heading")} onChange={(v) => onChange({ ...content, heading: v })} />
-          <TextField label="Story" value={str(content, "body")} onChange={(v) => onChange({ ...content, body: v })} multiline />
+          <TextField label={profile.sections.story.name} value={str(content, "body")} onChange={(v) => onChange({ ...content, body: v })} multiline />
         </>
       );
     case "venue":
@@ -737,7 +741,7 @@ export function ContentForm({ type, content, onChange, eventId }: { type: Invita
       );
     }
     case "video":
-      return <VideoField content={content} onChange={onChange} />;
+      return <VideoField content={content} onChange={onChange} defaultHeading={profile.sections.video.heading} />;
     case "dress_code":
       return <TextField label="Dress code" value={str(content, "description")} onChange={(v) => onChange({ ...content, description: v })} multiline />;
     case "entourage":
@@ -745,9 +749,9 @@ export function ContentForm({ type, content, onChange, eventId }: { type: Invita
         <RepeatableList
           items={arr<{ role: string; names: string }>(content, "groups")}
           onChange={(groups) => onChange({ ...content, groups })}
-          fields={[{ key: "role", label: "Role (e.g. Best Man)" }, { key: "names", label: "Name(s)" }]}
+          fields={[{ key: "role", label: `Role (e.g. ${profile.entourageRole})` }, { key: "names", label: "Name(s)" }]}
           emptyItem={{ role: "", names: "" }}
-          addLabel="Add entourage role"
+          addLabel="Add role"
         />
       );
     case "gift_registry":
@@ -759,7 +763,7 @@ export function ContentForm({ type, content, onChange, eventId }: { type: Invita
             onChange={(links) => onChange({ ...content, links })}
             fields={[{ key: "label", label: "Link label" }, { key: "url", label: "URL" }]}
             emptyItem={{ label: "", url: "" }}
-            addLabel="Add registry link"
+            addLabel="Add link"
           />
         </>
       );

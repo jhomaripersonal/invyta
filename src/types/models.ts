@@ -243,8 +243,9 @@ export interface Payment {
   currency: "PHP";
   description: string;
   status: "pending" | "paid" | "expired" | "failed";
-  provider: "paymongo";
-  // e.g. "gcash", "paymaya", "card" — as reported by PayMongo.
+  // "promo" = a free upgrade from a promo code (amount 0).
+  provider: "paymongo" | "promo";
+  // e.g. "gcash", "paymaya", "card" — as reported by PayMongo; "promo" for promo codes.
   paymentMethod?: string;
   paidAt?: string;
   createdAt: string;

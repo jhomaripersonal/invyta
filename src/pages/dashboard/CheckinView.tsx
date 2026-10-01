@@ -7,6 +7,7 @@ import { Icon } from "../../components/Icon";
 import UpgradeNotice from "../../components/UpgradeNotice";
 import { planAllows, requiredPlanLabel } from "../../data/plan-limits";
 import { T } from "../../lib/tokens";
+import { useSelectedEvent } from "../../lib/use-selected-event";
 
 const SCANNER_REGION_ID = "invyta-qr-scanner-region";
 
@@ -44,7 +45,7 @@ function EmptyEventsHint() {
 export function CheckinView({ onUpgrade }: { onUpgrade: (event?: EventRecord) => void }) {
   const { events, isLoading: eventsLoading } = useEvents();
   const { guestsForEvent, checkInGuest, undoCheckIn } = useGuests();
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useSelectedEvent(events);
   const [guests, setGuests] = useState<GuestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -59,10 +60,6 @@ export function CheckinView({ onUpgrade }: { onUpgrade: (event?: EventRecord) =>
   useEffect(() => {
     guestsRef.current = guests;
   }, [guests]);
-
-  useEffect(() => {
-    if (!selectedEventId && events.length > 0) setSelectedEventId(events[0].id);
-  }, [events, selectedEventId]);
 
   async function reloadGuests() {
     if (!selectedEventId) return;

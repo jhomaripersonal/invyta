@@ -9,7 +9,7 @@ import { TEMPLATES } from "../../../data/templates";
 import { applyTemplateDesign } from "../../../data/apply-template-design";
 import { planAllows } from "../../../data/plan-limits";
 import { useEventPlan } from "../../../lib/event-plan-context";
-import { SECTION_LABELS } from "../../../components/invitation/SectionList";
+import { categoryProfile } from "../../../data/category-profiles";
 import type { ButtonStyle, EventCategory, InvitationConfig, InvitationSectionType, InvitationTheme, PageLayout } from "../../../types/models";
 import { T } from "../../../lib/tokens";
 
@@ -233,7 +233,7 @@ export function DesignPanel({ config, onChange, category, eventId }: { config: I
               const current = s.type === "cover" ? coverStyle(s.content) : sectionStyle(s.type, s.content);
               return (
                 <label key={s.type} className="flex items-center justify-between gap-3">
-                  <span className="text-sm" style={{ color: T.charcoal }}>{SECTION_LABELS[s.type]}</span>
+                  <span className="text-sm" style={{ color: T.charcoal }}>{categoryProfile(category).sections[s.type].name}</span>
                   <select
                     value={current}
                     onChange={(e) => setSectionStyle(s.type, e.target.value)}

@@ -61,8 +61,10 @@ export default function CreateEventWizard() {
       // Drop a template left over from a different category (e.g. a
       // preset, then the organizer switched category on step 1).
       const chosen = templatesForCategory(category).some((t) => t.id === templateId) ? templateId : null;
-      await createEvent({ ...details, category, templateId: chosen ?? undefined });
-      navigate("/dashboard");
+      const created = await createEvent({ ...details, category, templateId: chosen ?? undefined });
+      // Straight into the builder — the organizer just picked a template
+      // and wants to see it, not find the event in a list.
+      navigate(`/dashboard/events/${created.id}/builder`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create the event. Please try again.");
       setSubmitting(false);
