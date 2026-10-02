@@ -13,7 +13,7 @@ import { T } from "../lib/tokens";
 //   format: portrait (1080×1350, FB/IG feed), square (1080×1080),
 //           story (1080×1920, Stories/Reels), link (1200×630, link card)
 //   badge:  the pill above the headline (default "Launching soon")
-//   url:    the address in the call to action (default invyta.app)
+//   url:    the address in the call to action (default invytaph.sbs)
 
 const FORMATS = {
   portrait: { w: 1080, h: 1350 },
@@ -97,7 +97,7 @@ export default function LaunchMockup() {
   const [params] = useSearchParams();
   const format: Format = (params.get("format") as Format) in FORMATS ? (params.get("format") as Format) : "portrait";
   const badge = params.get("badge") ?? "Launching soon";
-  const url = params.get("url") ?? "invyta.app";
+  const url = params.get("url") ?? "invytaph.sbs";
   const { w, h } = FORMATS[format];
 
   const artboard: CSSProperties = { width: w, height: h, backgroundColor: T.cream, fontFamily: "var(--font-sans)" };

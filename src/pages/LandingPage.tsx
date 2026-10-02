@@ -117,7 +117,7 @@ const ChevronRight = () => (
 
 const HERO_THEME = { paletteId: "gold", fontPairingId: "classic", buttonStyle: "rounded" } as const;
 const HERO_PALETTE = resolveTheme(HERO_THEME).palette;
-const HERO_URL = { host: "invyta.app", path: "/i/elena-and-marco" };
+const HERO_URL = { host: "invytaph.sbs", path: "/i/elena-and-marco" };
 
 const HERO_EVENT: EventRecord = {
   id: "hero-preview",

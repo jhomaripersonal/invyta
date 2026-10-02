@@ -5,8 +5,8 @@
 export const LEGAL_INFO = {
   companyName: "[Registered business name]",
   address: "[Registered business address]",
-  privacyEmail: "[privacy@your-domain.ph]",
-  supportEmail: "[support@your-domain.ph]",
+  privacyEmail: "customer-support@invytaph.sbs",
+  supportEmail: "customer-support@invytaph.sbs",
   dpoName: "[Data Protection Officer name]",
   venueCity: "[City]",
   lastUpdated: "September 26, 2026",

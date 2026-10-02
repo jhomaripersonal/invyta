@@ -6,12 +6,12 @@
 //
 // MOCKUP_BASE_URL overrides where the dev server is (default
 // http://localhost:8443). MOCKUP_URL sets the address shown in the call to
-// action (default invyta.app).
+// action (default invytaph.sbs).
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright-core";
 
 const BASE = process.env.MOCKUP_BASE_URL ?? "http://localhost:8443";
-const CTA_URL = process.env.MOCKUP_URL ?? "invyta.app";
+const CTA_URL = process.env.MOCKUP_URL ?? "invytaph.sbs";
 const FORMATS = { portrait: [1080, 1350], square: [1080, 1080], story: [1080, 1920], link: [1200, 630] };
 const BADGES = { "launching-soon": "Launching soon", "now-live": "Now live" };
 
