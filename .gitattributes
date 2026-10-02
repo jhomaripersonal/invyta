@@ -44,6 +44,7 @@
 # regular git file, like the images above — Vercel would otherwise deploy
 # the LFS pointer instead of the song.
 public/audio/*       -filter binary
+public/video/*       -filter binary
 
 # ---------------------------------------------------------------------------
 # 3D & Game Assets

@@ -14,7 +14,8 @@
     "test:functions": "node tests/functions/paymongo.test.mjs && node tests/functions/invite.test.mjs",
     "test:templates": "node tests/templates/designs.test.mjs",
     "test:unit": "node tests/unit/video-embed.test.mjs && node tests/unit/theme-palettes.test.mjs && node tests/unit/guest-tools.test.mjs && node tests/unit/auth-errors.test.mjs && node tests/unit/category-profiles.test.mjs",
-    "mockups": "node scripts/launch-mockups.mjs"
+    "mockups": "node scripts/launch-mockups.mjs",
+    "video": "node scripts/product-video.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

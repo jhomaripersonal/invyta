@@ -24,8 +24,9 @@ logs/
 .env.local
 .env*.local
 
-# Generated launch post images (pnpm mockups)
+# Generated launch post images (pnpm mockups) and product video (pnpm video)
 launch-mockups/
+product-video/
 
 # Local IDE and Supabase CLI state
 .idea/

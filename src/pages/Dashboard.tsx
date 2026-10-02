@@ -19,8 +19,10 @@ import SearchPalette, { SEARCH_SHORTCUT_LABEL } from "./dashboard/SearchPalette"
 import SettingsView from "./dashboard/SettingsView";
 import ImportGuestsModal from "./dashboard/ImportGuestsModal";
 import UpgradeEventModal from "./dashboard/UpgradeEventModal";
+import PromoCodeModal from "./dashboard/PromoCodeModal";
+import { usePromoCredit } from "../lib/promo-credit";
 import { listPayments, paymentMethodLabel } from "../lib/payments";
-import { PLAN_FEATURES, formatPeso, upgradePriceCentavos } from "../data/pricing";
+import { PAYMENTS_ENABLED, PLAN_FEATURES, formatPeso, upgradePriceCentavos } from "../data/pricing";
 import type { Payment } from "../types/models";
 import UpgradeNotice from "../components/UpgradeNotice";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -235,6 +237,22 @@ export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) 
   const [upgradeEvent, setUpgradeEvent] = useState<EventRecord | null>(null);
   const openUpgrade = (event?: EventRecord) => (event ? setUpgradeEvent(event) : goToBilling());
 
+  // Test launch: new organizers (no events yet, no promo code redeemed) are
+  // asked once whether they have a promo code. Billing keeps an entry point.
+  const promo = usePromoCredit();
+  const [promoOpen, setPromoOpen] = useState(false);
+  useEffect(() => {
+    if (!user || eventsLoading || promo.credit !== null || events.length > 0) return;
+    const key = `invyta:promo-prompt:${user.id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+    } catch {
+      // Storage blocked — still ask; it just may ask again next visit.
+    }
+    setPromoOpen(true);
+  }, [user, eventsLoading, promo.credit, events.length]);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -424,6 +442,7 @@ export default function Dashboard({ onNav }: { onNav: (p: NavTarget) => void }) 
       </div>
 
       {upgradeEvent && <UpgradeEventModal event={upgradeEvent} onClose={() => setUpgradeEvent(null)} />}
+      {promoOpen && <PromoCodeModal onClose={() => setPromoOpen(false)} />}
 
       {searchOpen && (
         <SearchPalette
@@ -478,6 +497,8 @@ function HomeView({ setView, firstName, events, isLoading }: { setView: (v: View
           </button>
         )}
       </div>
+
+      <PromoCreditBanner hasEvents={events.length > 0} />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -534,6 +555,32 @@ function HomeView({ setView, firstName, events, isLoading }: { setView: (v: View
 }
 
 // ─── Event list ───────────────────────────────────────────────────────────
+// An unused promo credit, until it's spent on an invitation.
+function PromoCreditBanner({ hasEvents }: { hasEvents: boolean }) {
+  const navigate = useNavigate();
+  const { available } = usePromoCredit();
+  if (!available) return null;
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl mb-8" style={{ backgroundColor: T.white, border: `1.5px solid ${T.accent}` }}>
+      <div>
+        <div className="text-sm font-semibold" style={{ color: T.charcoal }}>🎁 You have a free {planLabel(available)} invitation</div>
+        <div className="text-xs mt-0.5" style={{ color: T.muted }}>
+          {hasEvents
+            ? `Use it on a new invitation, or on an existing event from its Upgrade button.`
+            : `Create your invitation and it'll be ${planLabel(available)} — free, from your promo code.`}
+        </div>
+      </div>
+      <button
+        onClick={() => navigate("/dashboard/events/new")}
+        className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 flex-shrink-0 self-start sm:self-auto"
+        style={{ backgroundColor: T.accent, color: T.white }}
+      >
+        Create invitation
+      </button>
+    </div>
+  );
+}
+
 function EventList({ events }: { events: EventRecord[] }) {
   return (
     <div className="rounded-2xl" style={{ backgroundColor: T.white, border: `1px solid ${T.border}` }}>
@@ -1578,6 +1625,8 @@ const PAYMENT_STATUS: Record<Payment["status"], { label: string; variant: BadgeV
 function BillingView() {
   const { events, isLoading } = useEvents();
   const [upgradeEvent, setUpgradeEvent] = useState<EventRecord | null>(null);
+  const promo = usePromoCredit();
+  const [promoOpen, setPromoOpen] = useState(false);
   const [payments, setPayments] = useState<Payment[] | null>(null);
 
   useEffect(() => {
@@ -1586,8 +1635,8 @@ function BillingView() {
 
   const plans = [
     { tier: "free" as const, name: "Free", price: "₱0", sub: "every event starts here", highlight: false },
-    { tier: "premium" as const, name: "Premium", price: formatPeso(upgradePriceCentavos("free", "premium")), sub: "one time, per event", highlight: true },
-    { tier: "pro" as const, name: "Pro", price: formatPeso(upgradePriceCentavos("free", "pro")), sub: "one time, per event", highlight: false },
+    { tier: "premium" as const, name: "Premium", price: formatPeso(upgradePriceCentavos("free", "premium")), sub: PAYMENTS_ENABLED ? "one time, per event" : "one time, per event · coming soon", highlight: true },
+    { tier: "pro" as const, name: "Pro", price: formatPeso(upgradePriceCentavos("free", "pro")), sub: PAYMENTS_ENABLED ? "one time, per event" : "one time, per event · coming soon", highlight: false },
   ];
 
   return (
@@ -1596,7 +1645,14 @@ function BillingView() {
         <h1 className="text-2xl font-bold mb-0.5" style={{ letterSpacing: "-0.025em" }}>Billing & Plans</h1>
         <p className="text-sm" style={{ color: T.muted }}>
           Plans are per event — upgrade only the events that need it. A one-time QR Ph payment (scan with GCash, Maya or any bank app); no subscription.
+          {!PAYMENTS_ENABLED && <span className="font-semibold" style={{ color: T.charcoal }}> Paid upgrades are coming soon.</span>}
         </p>
+        {promo.credit === null && (
+          <button onClick={() => setPromoOpen(true)} className="text-sm font-semibold underline mt-2" style={{ color: T.accent }}>
+            Have a promo code?
+          </button>
+        )}
+        {promoOpen && <PromoCodeModal onClose={() => setPromoOpen(false)} />}
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-9">

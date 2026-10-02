@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useEvents, type EventRecord } from "../../lib/events-store";
-import { redeemPromoCode, startEventUpgrade } from "../../lib/payments";
-import { PLAN_FEATURES, formatPeso, upgradePriceCentavos, type PaidPlan } from "../../data/pricing";
+import type { EventRecord } from "../../lib/events-store";
+import { startEventUpgrade } from "../../lib/payments";
+import { usePromoCredit } from "../../lib/promo-credit";
+import { PAYMENTS_ENABLED, PLAN_FEATURES, formatPeso, upgradePriceCentavos, type PaidPlan } from "../../data/pricing";
 import { planAllows, planLabel } from "../../data/plan-limits";
 import { T } from "../../lib/tokens";
 import { useDialog } from "../../components/useDialog";
@@ -11,11 +12,11 @@ const PLAN_RANK = { free: 0, premium: 1, pro: 2, event_planner: 3 } as const;
 // Upgrade ONE event (billing is per event). Picks Premium or Pro, shows
 // the price (only the difference if the event already has Premium), then
 // hands off to PayMongo's hosted checkout. The refund terms are stated
-// here, before paying, as the compliance addendum requires. A single-use
-// promo code (test launch) upgrades the event for free instead.
+// here, before paying, as the compliance addendum requires. An account with
+// a promo credit (test launch) can spend it here instead of paying.
 export default function UpgradeEventModal({ event, onClose }: { event: EventRecord; onClose: () => void }) {
   const dialog = useDialog(onClose);
-  const { refresh } = useEvents();
+  const promo = usePromoCredit();
   const options = (["premium", "pro"] as PaidPlan[]).filter((p) => PLAN_RANK[event.ownerPlan] < PLAN_RANK[p]);
   const [choice, setChoice] = useState<PaidPlan>(options.includes("premium") ? "premium" : "pro");
   const [submitting, setSubmitting] = useState(false);
@@ -24,9 +25,11 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
   const [promoCode, setPromoCode] = useState("");
   const [promoError, setPromoError] = useState("");
   const [redeeming, setRedeeming] = useState(false);
-  // Set once a code is applied; the success view stays even after the
-  // refreshed event no longer has any upgrade options.
+  // Set once the credit is spent here; the success view stays even after
+  // the refreshed event no longer has any upgrade options.
   const [redeemedPlan, setRedeemedPlan] = useState<PaidPlan | null>(null);
+  // An unused credit that would actually upgrade this event.
+  const creditPlan = promo.available && PLAN_RANK[event.ownerPlan] < PLAN_RANK[promo.available] ? promo.available : null;
 
   async function handleRedeem(e: React.FormEvent) {
     e.preventDefault();
@@ -34,11 +37,22 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
     setRedeeming(true);
     setPromoError("");
     try {
-      const plan = await redeemPromoCode(event.id, promoCode);
-      setRedeemedPlan(plan);
-      await refresh();
+      await promo.redeem(promoCode);
+      setPromoOpen(false);
     } catch (err) {
       setPromoError(err instanceof Error ? err.message : "Couldn't apply the promo code.");
+    } finally {
+      setRedeeming(false);
+    }
+  }
+
+  async function handleUseCredit() {
+    setRedeeming(true);
+    setPromoError("");
+    try {
+      setRedeemedPlan(await promo.useOn(event.id));
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : "Couldn't use your promo credit.");
     } finally {
       setRedeeming(false);
     }
@@ -69,7 +83,7 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
             <div className="text-3xl mb-2">🎉</div>
             <p className="text-base font-semibold mb-1" style={{ color: T.charcoal }}>{planLabel(redeemedPlan)} unlocked</p>
             <p className="text-sm mb-5" style={{ color: T.muted }}>
-              Promo code applied to <span className="font-semibold" style={{ color: T.charcoal }}>{event.name}</span>. All its {planLabel(redeemedPlan)} features are ready to use.
+              Your promo credit was used on <span className="font-semibold" style={{ color: T.charcoal }}>{event.name}</span>. All its {planLabel(redeemedPlan)} features are ready to use.
             </p>
             <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90" style={{ backgroundColor: T.accent, color: T.white }}>
               Done
@@ -79,12 +93,29 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
         <>
         <p className="text-sm mb-5" style={{ color: T.muted }}>
           <span className="font-semibold" style={{ color: T.charcoal }}>{event.name}</span> is on {planLabel(event.ownerPlan)}. Upgrades apply to this event only — a one-time payment, no subscription.
+          {!PAYMENTS_ENABLED && " Paid upgrades are coming soon."}
         </p>
 
         {options.length === 0 ? (
           <p className="text-sm py-6 text-center" style={{ color: T.muted }}>This event already has every feature.</p>
         ) : (
           <>
+            {creditPlan && (
+              <div className="rounded-xl p-4 mb-5" style={{ backgroundColor: T.cream, border: `2px solid ${T.accent}` }}>
+                <p className="text-sm font-semibold mb-0.5" style={{ color: T.charcoal }}>🎁 You have a free {planLabel(creditPlan)} invitation</p>
+                <p className="text-xs mb-3" style={{ color: T.muted }}>From your promo code. Use it on this event — no payment needed. It can only be used once.</p>
+                <button
+                  onClick={handleUseCredit}
+                  disabled={redeeming}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ backgroundColor: T.accent, color: T.white }}
+                >
+                  {redeeming ? "Applying..." : `Use it on ${event.name}`}
+                </button>
+                {promoError && <p className="text-xs mt-2" style={{ color: T.red }}>{promoError}</p>}
+              </div>
+            )}
+
             <div className={`grid gap-3 mb-5 ${options.length > 1 ? "sm:grid-cols-2" : ""}`}>
               {options.map((p) => {
                 const price = upgradePriceCentavos(event.plan, p);
@@ -121,20 +152,34 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
 
             {error && <p className="text-xs mb-3" style={{ color: T.red }}>{error}</p>}
 
-            <button
-              onClick={handlePay}
-              disabled={submitting}
-              className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: T.accent, color: T.white }}
-            >
-              {submitting ? "Opening secure checkout..." : `Pay ${formatPeso(upgradePriceCentavos(event.plan, choice))} with QR Ph`}
-            </button>
-            <p className="text-[11px] leading-relaxed mt-3" style={{ color: T.muted }}>
-              Secure checkout by PayMongo — scan the QR with GCash, Maya or any bank app. Refundable within 24 hours if this invitation hasn't been
-              published or sent to guests; non-refundable after that, except where the law requires otherwise. See our{" "}
-              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">Terms</a>.
-            </p>
+            {PAYMENTS_ENABLED ? (
+              <>
+                <button
+                  onClick={handlePay}
+                  disabled={submitting}
+                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ backgroundColor: T.accent, color: T.white }}
+                >
+                  {submitting ? "Opening secure checkout..." : `Pay ${formatPeso(upgradePriceCentavos(event.plan, choice))} with QR Ph`}
+                </button>
+                <p className="text-[11px] leading-relaxed mt-3" style={{ color: T.muted }}>
+                  Secure checkout by PayMongo — scan the QR with GCash, Maya or any bank app. Refundable within 24 hours if this invitation hasn't been
+                  published or sent to guests; non-refundable after that, except where the law requires otherwise. See our{" "}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">Terms</a>.
+                </p>
+              </>
+            ) : (
+              <>
+                <button disabled className="w-full py-3 rounded-xl text-sm font-semibold cursor-not-allowed" style={{ backgroundColor: T.surface, color: T.muted }}>
+                  Coming soon
+                </button>
+                <p className="text-[11px] leading-relaxed mt-3 text-center" style={{ color: T.muted }}>
+                  Paid upgrades with QR Ph (GCash, Maya or any bank app) are almost ready.
+                </p>
+              </>
+            )}
 
+            {promo.credit === null && (
             <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${T.border}` }}>
               {promoOpen ? (
                 <form onSubmit={handleRedeem}>
@@ -162,7 +207,7 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
                     </button>
                   </div>
                   {promoError && <p className="text-xs mt-2" style={{ color: T.red }}>{promoError}</p>}
-                  <p className="text-[11px] mt-2" style={{ color: T.muted }}>Each code works once, for one event only.</p>
+                  <p className="text-[11px] mt-2" style={{ color: T.muted }}>A promo code gives your account one free upgraded invitation.</p>
                 </form>
               ) : (
                 <button onClick={() => setPromoOpen(true)} className="text-xs font-semibold underline" style={{ color: T.muted }}>
@@ -170,6 +215,7 @@ export default function UpgradeEventModal({ event, onClose }: { event: EventReco
                 </button>
               )}
             </div>
+            )}
           </>
         )}
         </>

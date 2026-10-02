@@ -83,6 +83,10 @@ export function accountPlan(user: { plan: PlanTier; isAdmin?: boolean } | null |
   return user?.isAdmin && PLAN_RANK[plan] < PLAN_RANK.pro ? "pro" : plan;
 }
 
+export function planAtLeast(plan: PlanTier | undefined, min: PlanTier): boolean {
+  return PLAN_RANK[plan ?? "free"] >= PLAN_RANK[min];
+}
+
 export function planAllows(plan: PlanTier | undefined, feature: PlanFeature): boolean {
   return PLAN_RANK[plan ?? "free"] >= PLAN_RANK[FEATURE_MIN_PLAN[feature]];
 }

@@ -6,6 +6,12 @@ import type { PlanTier } from "../types/models";
 
 export type PaidPlan = "premium" | "pro";
 
+// Paid upgrades are off until the PayMongo integration is finished: the
+// upgrade dialog and Billing show "Coming soon" instead of checkout (promo
+// credits still work). Set VITE_PAYMENTS_ENABLED=true (e.g. in .env.local,
+// or in Vercel when going live) to turn checkout on.
+export const PAYMENTS_ENABLED = import.meta.env.VITE_PAYMENTS_ENABLED === "true";
+
 const PLAN_PRICE_CENTAVOS: Record<PlanTier, number> = { free: 0, premium: 19900, pro: 49900, event_planner: 0 };
 
 // Upgrading an event that already has a paid plan costs only the difference.
