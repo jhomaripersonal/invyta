@@ -672,8 +672,8 @@ export default function LandingPage({ onNav }: { onNav: (p: NavTarget) => void }
       </div>
 
       {/* ── PRODUCT VIDEO ──────────────────────────────────────────── */}
-      {/* Rendered by `pnpm video` and copied into public/video. Only the
-          metadata loads up front, so the ~9 MB file streams on play. */}
+      {/* Rendered by `pnpm video` (video and -thumbnail.jpg poster) and copied
+          into public/video. Nothing loads until play; the poster stands in. */}
       <section className="pt-24">
         <div className="max-w-5xl mx-auto px-6">
           <Reveal className="text-center mb-10">
@@ -689,9 +689,10 @@ export default function LandingPage({ onNav }: { onNav: (p: NavTarget) => void }
             >
               <video
                 src="/video/invyta.mp4"
+                poster="/video/invyta-poster.jpg"
                 controls
                 playsInline
-                preload="metadata"
+                preload="none"
                 className="w-full h-full object-cover"
                 aria-label="Invyta product walkthrough video"
               />

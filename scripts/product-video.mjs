@@ -26,6 +26,8 @@
 // VIDEO_MUSIC       an audio file to use instead of the generated music
 //                   (looped and faded to fit), or "none" for no music
 // VIDEO_MUSIC_GAIN  music level under the voice, in dB (default -14)
+// VIDEO_THUMBNAIL_AT  second to take each format's -thumbnail.jpg from
+//                   (default 10.5, the hero scene)
 // VIDEO_REUSE_FRAMES=1  keep the last silent renders and only redo the audio
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
@@ -42,6 +44,7 @@ const VOICE = process.env.VIDEO_VOICE ?? "en-US-AvaNeural";
 const VOICE_RATE = process.env.VIDEO_VOICE_RATE ?? "+5%";
 const MUSIC = process.env.VIDEO_MUSIC ?? "generated";
 const MUSIC_GAIN = Number(process.env.VIDEO_MUSIC_GAIN ?? -14);
+const THUMBNAIL_AT = Number(process.env.VIDEO_THUMBNAIL_AT ?? 10.5);
 const OUT_DIR = "product-video";
 
 const works = (bin, args) => spawnSync(bin, args, { stdio: "ignore" }).status === 0;
@@ -239,6 +242,16 @@ if (clips.length || music) {
   // -14 LUFS: the level TikTok, Instagram and YouTube play everything at.
   graph.push(`[mix]atrim=0:${duration},loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[out]`);
   run(ffmpeg.bin, ["-y", "-loglevel", "error", ...inputs, "-filter_complex", graph.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", soundtrack]);
+}
+
+// ─── Thumbnails ───────────────────────────────────────────────────────────
+// The hero scene once the laptop and phone have settled: the landing
+// page's poster, and a custom thumbnail for Facebook/YouTube uploads.
+for (const format of FORMATS) {
+  const thumb = join(OUT_DIR, `${name(format)}-thumbnail.jpg`);
+  const at = Math.min(THUMBNAIL_AT, Math.max(0, duration - 0.5));
+  run(ffmpeg.bin, ["-y", "-loglevel", "error", "-ss", String(at), "-i", silentPath(format), "-frames:v", "1", "-q:v", "2", thumb]);
+  console.log(`  ${thumb}`);
 }
 
 // ─── Final videos ─────────────────────────────────────────────────────────
