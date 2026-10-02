@@ -101,8 +101,8 @@ const VOICEOVER: { scene: SceneId; at: number; text: string; say?: string }[] = 
   {
     scene: "outro",
     at: 0.4,
-    text: "Every event starts free. Create yours today at invyta.app.",
-    say: "Every event starts free. Create yours today at Inveeta dot app.",
+    text: "Every event starts free. Create yours today at invytaph.sbs.",
+    say: "Every event starts free. Create yours today at Inveeta P H dot S B S.",
   },
 ];
 
@@ -907,7 +907,7 @@ function ShareScene({ lt }: { lt: number }) {
                   <div style={{ padding: "10px 14px 12px" }}>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#111" }}>Elena & Marco — You're invited</div>
                     <div style={{ fontSize: 13, color: "#55585E", marginTop: 2 }}>Friday, January 29, 2027 · The Blue Leaf, Taguig</div>
-                    <div style={{ fontSize: 12, color: "#8A8D93", marginTop: 6 }}>invyta.app</div>
+                    <div style={{ fontSize: 12, color: "#8A8D93", marginTop: 6 }}>invytaph.sbs</div>
                   </div>
                 </div>
               </div>
@@ -1308,7 +1308,7 @@ function RsvpScene({ lt }: { lt: number }) {
 
 // ─── 7. Check-in ──────────────────────────────────────────────────────────
 const GuestQr = memo(function GuestQr() {
-  return <QrCode payload="https://invyta.app/i/elena-and-marco/g/maria-santos" size={230} />;
+  return <QrCode payload="https://invytaph.sbs/i/elena-and-marco/g/maria-santos" size={230} />;
 });
 
 function CheckinScene({ lt }: { lt: number }) {
@@ -1542,7 +1542,7 @@ function OutroScene({ lt }: { lt: number }) {
           Create yours free
         </span>
         <span className="font-semibold" style={{ fontSize: 38, color: T.charcoal }}>
-          invyta.app
+          invytaph.sbs
         </span>
       </div>
     </div>

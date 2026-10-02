@@ -7,7 +7,7 @@
 // priced by upgradePriceCentavos, recorded as a pending payment with the
 // service role, and only then sent to PayMongo.
 //
-// Env: PAYMONGO_SECRET_KEY, APP_URL (e.g. https://invyta.app — where
+// Env: PAYMONGO_SECRET_KEY, APP_URL (e.g. https://invytaph.sbs — where
 // PayMongo sends the guest back), optional PAYMONGO_PAYMENT_METHODS
 // (comma-separated, default "qrph"; only list methods
 // activated on your PayMongo account). SUPABASE_URL / SUPABASE_ANON_KEY /
