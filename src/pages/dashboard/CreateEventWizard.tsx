@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEvents, type NewEventInput } from "../../lib/events-store";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_GROUPS } from "../../data/event-categories";
 import { TEMPLATES, templatesForCategory } from "../../data/templates";
-import { accountPlan, planAllows } from "../../data/plan-limits";
-import { formatPeso, upgradePriceCentavos } from "../../data/pricing";
+import { accountPlan, planAllows, planAtLeast, planLabel } from "../../data/plan-limits";
+import { PAYMENTS_ENABLED, formatPeso, upgradePriceCentavos } from "../../data/pricing";
 import { useAuth } from "../../lib/auth-context";
+import { usePromoCredit } from "../../lib/promo-credit";
 import type { EventCategory } from "../../types/models";
 import { T } from "../../lib/tokens";
 
@@ -29,7 +30,14 @@ export default function CreateEventWizard() {
   const { createEvent } = useEvents();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const canUsePremium = planAllows(accountPlan(user), "premium_templates");
+  const promo = usePromoCredit();
+  // An unused promo credit makes this event upgraded at creation — on by
+  // default (that's what the credit is for), and the organizer can switch
+  // it off to keep the credit for another invitation.
+  const [useCredit, setUseCredit] = useState(true);
+  const creditPlan = promo.available && !planAtLeast(accountPlan(user), promo.available) ? promo.available : null;
+  const applyingCredit = creditPlan !== null && useCredit;
+  const canUsePremium = planAllows(accountPlan(user), "premium_templates") || applyingCredit;
   // Arriving from "Use this template" (?template=<id>) pre-picks both the
   // template and its category; a premium template on a lower plan is
   // ignored rather than pre-selected into a choice the wizard would block.
@@ -60,8 +68,12 @@ export default function CreateEventWizard() {
     try {
       // Drop a template left over from a different category (e.g. a
       // preset, then the organizer switched category on step 1).
-      const chosen = templatesForCategory(category).some((t) => t.id === templateId) ? templateId : null;
-      const created = await createEvent({ ...details, category, templateId: chosen ?? undefined });
+      // Also drop a premium template picked before unticking the promo credit.
+      const chosen = templatesForCategory(category).some((t) => t.id === templateId && (!t.premium || canUsePremium)) ? templateId : null;
+      const created = await createEvent(
+        { ...details, category, templateId: chosen ?? undefined },
+        applyingCredit ? { upgradeFirst: async (id) => void (await promo.useOn(id)) } : undefined,
+      );
       // Straight into the builder — the organizer just picked a template
       // and wants to see it, not find the event in a list.
       navigate(`/dashboard/events/${created.id}/builder`, { replace: true });
@@ -151,8 +163,28 @@ export default function CreateEventWizard() {
           <h1 className="text-2xl font-bold mb-1" style={{ letterSpacing: "-0.025em" }}>Pick a starting template</h1>
           <p className="text-sm mb-7" style={{ color: T.muted }}>
             You can customize everything once the invitation builder is ready.
-            {!canUsePremium && ` Premium templates: create your event, then upgrade it (from ${formatPeso(upgradePriceCentavos("free", "premium"))}) and apply one from the builder's Design tab.`}
+            {!canUsePremium &&
+              (PAYMENTS_ENABLED
+                ? ` Premium templates: create your event, then upgrade it (from ${formatPeso(upgradePriceCentavos("free", "premium"))}) and apply one from the builder's Design tab.`
+                : " Premium templates come with paid upgrades — coming soon.")}
           </p>
+          {creditPlan && (
+            <label
+              className="flex items-start gap-3 p-4 rounded-xl mb-6 cursor-pointer"
+              style={{ backgroundColor: useCredit ? "rgba(28, 41, 66,0.06)" : T.white, border: `1.5px solid ${useCredit ? T.accent : T.border}` }}
+            >
+              <input type="checkbox" checked={useCredit} onChange={(e) => {
+                setUseCredit(e.target.checked);
+                if (!e.target.checked && TEMPLATES.find((t) => t.id === templateId)?.premium && !planAllows(accountPlan(user), "premium_templates")) setTemplateId(null);
+              }} className="mt-0.5 w-4 h-4 flex-shrink-0" style={{ accentColor: T.accent }} />
+              <span>
+                <span className="block text-sm font-semibold" style={{ color: T.charcoal }}>🎁 Make this a {planLabel(creditPlan)} invitation — free</span>
+                <span className="block text-xs mt-0.5" style={{ color: T.muted }}>
+                  Uses your promo credit. You have one, so untick this if you'd rather save it for another invitation.
+                </span>
+              </span>
+            </label>
+          )}
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
             {templatesForCategory(category).map((t) => {
               const locked = t.premium && !canUsePremium;
@@ -213,7 +245,7 @@ export default function CreateEventWizard() {
             className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
             style={{ backgroundColor: T.accent, color: T.white }}
           >
-            {submitting ? "Creating..." : "Create draft event"}
+            {submitting ? "Creating..." : applyingCredit ? `Create ${planLabel(creditPlan!)} event` : "Create draft event"}
           </button>
         )}
       </div>

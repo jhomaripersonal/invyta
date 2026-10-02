@@ -24,11 +24,11 @@ export async function startEventUpgrade(eventId: string, plan: PaidPlan): Promis
   window.location.assign(data.checkoutUrl);
 }
 
-// Applies a single-use promo code to one event (redeem-promo Edge
-// Function). The server checks the code and applies the upgrade; on
-// success the caller should refresh events to pick up the new plan.
-export async function redeemPromoCode(eventId: string, code: string): Promise<PaidPlan> {
-  const { data, error } = await supabase.functions.invoke("redeem-promo", { body: { eventId, code: code.trim() } });
+// Promo codes (redeem-promo Edge Function): "redeem" gives the account one
+// credit for the code's plan, "use" spends it on an event. The server
+// checks everything; see src/lib/promo-credit.tsx for the account's credit.
+export async function promoAction(body: { action: "redeem"; code: string } | { action: "use"; eventId: string }): Promise<PaidPlan> {
+  const { data, error } = await supabase.functions.invoke("redeem-promo", { body });
   if (error || !data?.plan) throw await functionError(error, "Couldn't apply the promo code. Please try again.");
   return data.plan;
 }

@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-route
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { EventsProvider } from "./lib/events-store";
 import { GuestsProvider } from "./lib/guests-store";
+import { PromoCreditProvider } from "./lib/promo-credit";
 import { ToastProvider } from "./components/Toast";
 import PageLoader from "./components/PageLoader";
 
@@ -28,6 +29,8 @@ const AboutPage = lazy(() => import("./pages/About"));
 const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
 // Launch post images (dev only — not part of production builds).
 const LaunchMockupPage = import.meta.env.DEV ? lazy(() => import("./pages/LaunchMockup")) : null;
+// Product video (dev only, like the launch images).
+const ProductVideoPage = import.meta.env.DEV ? lazy(() => import("./pages/ProductVideo")) : null;
 
 type NavTarget = "landing" | "dashboard" | "login" | "register";
 
@@ -73,6 +76,7 @@ export default function App() {
   return (
     <AuthProvider>
       <EventsProvider>
+        <PromoCreditProvider>
         <GuestsProvider>
           <ToastProvider>
           <BrowserRouter>
@@ -100,6 +104,7 @@ export default function App() {
                   />
                   <Route path="/terms" element={<TermsPage />} />
                   {LaunchMockupPage && <Route path="/launch-mockup" element={<LaunchMockupPage />} />}
+                  {ProductVideoPage && <Route path="/product-video" element={<ProductVideoPage />} />}
                   <Route path="/i/:slug" element={<PublicInvitationPage />} />
                   <Route path="/i/:slug/g/:guestId" element={<PublicInvitationPage />} />
                   <Route
@@ -149,6 +154,7 @@ export default function App() {
           </BrowserRouter>
           </ToastProvider>
         </GuestsProvider>
+        </PromoCreditProvider>
       </EventsProvider>
     </AuthProvider>
   );

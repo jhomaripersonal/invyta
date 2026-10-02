@@ -173,11 +173,18 @@ interface EventsContextValue {
   getEvent: (id: string) => EventRecord | undefined;
   getEventById: (id: string) => Promise<EventRecord | null>;
   getEventBySlug: (slug: string) => Promise<EventRecord | null>;
-  createEvent: (input: NewEventInput) => Promise<EventRecord>;
+  createEvent: (input: NewEventInput, options?: CreateEventOptions) => Promise<EventRecord>;
   updateEvent: (id: string, patch: Partial<NewEventInput> & { status?: EventStatus }) => Promise<void>;
   updateInvitation: (id: string, invitation: InvitationConfig) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
+}
+
+// upgradeFirst: upgrades the new event (e.g. spends a promo credit) after
+// it's inserted but before its template is applied — the database only
+// accepts a premium template on an event that already has the plan.
+export interface CreateEventOptions {
+  upgradeFirst?: (eventId: string) => Promise<void>;
 }
 
 const EventsContext = createContext<EventsContextValue | null>(null);
@@ -244,12 +251,23 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     return fromRow(data as EventRow);
   }
 
-  async function createEvent(input: NewEventInput): Promise<EventRecord> {
+  async function createEvent(input: NewEventInput, options: CreateEventOptions = {}): Promise<EventRecord> {
     if (!user) throw new Error("Must be signed in to create an event.");
     // The chosen template decides the invitation's starting design and its
     // cover photo, so the event looks like the preview the organizer picked.
     const template = TEMPLATES.find((t) => t.id === input.templateId);
     const design = template ? TEMPLATE_DESIGNS[template.name] : undefined;
+    if (options.upgradeFirst && template) {
+      const plain = await createEvent({ ...input, templateId: undefined });
+      await options.upgradeFirst(plain.id);
+      const { error } = await supabase
+        .from("events")
+        .update({ template_id: template.id, image_url: template.img, invitation: createDefaultInvitation(input, design), updated_at: new Date().toISOString() })
+        .eq("id", plain.id);
+      if (error) throw error;
+      await refresh();
+      return (await getEventById(plain.id)) ?? plain;
+    }
     const { data, error } = await supabase
       .from("events")
       .insert({
@@ -275,6 +293,10 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     if (error || !data) throw error ?? new Error("Failed to create event.");
     const record = fromRow(data as EventRow);
     setEvents((prev) => [record, ...prev]);
+    if (options.upgradeFirst) {
+      await options.upgradeFirst(record.id);
+      await refresh();
+    }
     return record;
   }
 

@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string;
   readonly NEXT_PUBLIC_SUPABASE_URL?: string;
   readonly NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+  // "true" turns on paid upgrades (PayMongo); anything else shows "Coming soon".
+  readonly VITE_PAYMENTS_ENABLED?: string;
 }
 
 interface ImportMeta {

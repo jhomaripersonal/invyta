@@ -10,7 +10,7 @@ import { listApprovedTestimonials, type PublicTestimonial } from "../lib/testimo
 import { SECTION_ORDER } from "../data/default-invitation";
 import type { EventRecord } from "../lib/events-store";
 import type { EventCategory, InvitationConfig } from "../types/models";
-import { formatPeso, upgradePriceCentavos } from "../data/pricing";
+import { PAYMENTS_ENABLED, formatPeso, upgradePriceCentavos } from "../data/pricing";
 import { T } from "../lib/tokens";
 
 type NavTarget = "landing" | "dashboard" | "login" | "register";
@@ -671,6 +671,35 @@ export default function LandingPage({ onNav }: { onNav: (p: NavTarget) => void }
         </div>
       </div>
 
+      {/* ── PRODUCT VIDEO ──────────────────────────────────────────── */}
+      {/* Rendered by `pnpm video` and copied into public/video. Only the
+          metadata loads up front, so the ~9 MB file streams on play. */}
+      <section className="pt-24">
+        <div className="max-w-5xl mx-auto px-6">
+          <Reveal className="text-center mb-10">
+            <SectionLabel>See it in action</SectionLabel>
+            <SectionHeading>
+              Watch an invitation <Serif>come together</Serif>
+            </SectionHeading>
+          </Reveal>
+          <Reveal>
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ aspectRatio: "16/9", backgroundColor: T.charcoal, border: `1px solid ${T.border}`, boxShadow: "0 20px 50px rgba(28, 41, 66, 0.18)" }}
+            >
+              <video
+                src="/video/invyta.mp4"
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover"
+                aria-label="Invyta product walkthrough video"
+              />
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── HOW IT WORKS ───────────────────────────────────────────── */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-6">
@@ -846,8 +875,8 @@ export default function LandingPage({ onNav }: { onNav: (p: NavTarget) => void }
           <RevealGroup className="grid md:grid-cols-3 gap-5 items-stretch">
             {[
               { name: "Free", price: "₱0", sub: "forever", highlight: false, badge: null, features: ["Basic templates", "Basic RSVP", "Up to 50 guests", "Up to 10 gallery photos", "Standard URL", "Invyta branding"], cta: "Get started free" },
-              { name: "Premium", price: PREMIUM_PRICE, sub: "per event", highlight: true, badge: "Most Popular", features: ["All premium templates", "Unlimited guests", "Custom link (e.g. /i/elena-and-marco)", "Up to 30 gallery photos", "Analytics & QR check-in", "Remove Invyta branding"], cta: "Choose Premium" },
-              { name: "Pro", price: PRO_PRICE, sub: "per event", highlight: false, badge: null, features: ["Everything in Premium", "Video — your prenup film or SDE", "Background music", "Unlimited gallery photos", "Personalized invitations", "Custom RSVP questions", "Party-size limits & bulk guest actions", "Priority support"], cta: "Choose Pro" },
+              { name: "Premium", price: PREMIUM_PRICE, sub: "per event", highlight: true, badge: PAYMENTS_ENABLED ? "Most Popular" : "Coming soon", features: ["All premium templates", "Unlimited guests", "Custom link (e.g. /i/elena-and-marco)", "Up to 30 gallery photos", "Analytics & QR check-in", "Remove Invyta branding"], cta: PAYMENTS_ENABLED ? "Choose Premium" : "Get started free" },
+              { name: "Pro", price: PRO_PRICE, sub: "per event", highlight: false, badge: PAYMENTS_ENABLED ? null : "Coming soon", features: ["Everything in Premium", "Video — your prenup film or SDE", "Background music", "Unlimited gallery photos", "Personalized invitations", "Custom RSVP questions", "Party-size limits & bulk guest actions", "Priority support"], cta: PAYMENTS_ENABLED ? "Choose Pro" : "Get started free" },
             ].map((p) => (
               <RevealItem
                 key={p.name}
@@ -859,7 +888,7 @@ export default function LandingPage({ onNav }: { onNav: (p: NavTarget) => void }
                 }}
               >
                 {p.badge && (
-                  <span className="text-[11px] font-bold px-3 py-1 rounded-full self-start mb-4" style={{ backgroundColor: T.white, color: T.charcoal }}>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full self-start mb-4" style={{ backgroundColor: p.highlight ? T.white : T.accent, color: p.highlight ? T.charcoal : T.white }}>
                     {p.badge}
                   </span>
                 )}

@@ -836,66 +836,109 @@ $$;
 revoke execute on function public.mark_payment_paid(uuid, int, text, text) from public, anon, authenticated;
 grant execute on function public.mark_payment_paid(uuid, int, text, text) to service_role;
 
--- ─── promo codes (single-use free upgrades) ─────────────────────────────
--- Each code is good for ONE person and ONE event; it can also be locked
--- to one email, and each account can redeem only one code. Redemptions
--- are recorded as ₱0 paid payments (provider 'promo'). Codes are created
--- by hand in the SQL Editor — see supabase/add-promo-codes.sql.
+-- ─── promo codes (free upgraded invitations) ────────────────────────────
+-- A code (possibly shared — max_redemptions) gives each account that
+-- redeems it ONE credit; each account can redeem one code, and spends the
+-- credit on the invitation of its choice. Using it is recorded as a ₱0
+-- paid payment (provider 'promo'). Codes are created by hand in the SQL
+-- Editor — see supabase/add-promo-codes.sql.
+
 -- No RLS policies: only the service role (the redeem-promo Edge Function)
--- and the SQL Editor can read or write codes, so they can't be listed or
--- guessed from the browser.
+-- and the SQL Editor can read or write codes, so they can't be listed
+-- from the browser.
 create table if not exists public.promo_codes (
   code text primary key check (code = upper(code) and length(code) between 4 and 64),
   plan text not null check (plan in ('premium', 'pro')),
-  -- Optional: only the account with this email can redeem the code.
-  assigned_email text,
+  -- How many accounts can redeem it (one credit each).
+  max_redemptions int not null default 1 check (max_redemptions > 0),
   note text,
   active boolean not null default true,
   expires_at timestamptz,
-  redeemed_by uuid references auth.users (id) on delete set null,
-  redeemed_event_id uuid references public.events (id) on delete set null,
-  redeemed_at timestamptz,
   created_at timestamptz not null default now()
 );
 
--- One code per account.
-create unique index if not exists promo_codes_redeemed_by_idx on public.promo_codes (redeemed_by);
-
 alter table public.promo_codes enable row level security;
 
--- Redeems a code for one of the user's events, in one transaction: checks
--- the code and the event, uses up the code, records a ₱0 payment and
--- upgrades the event. Returns { status, plan? } — status is 'ok' or why it
--- was refused ('invalid', 'used', 'expired', 'not_yours',
--- 'already_redeemed', 'event_not_found', 'already_has_plan'). Called only
--- by the redeem-promo Edge Function (service role), which has already
--- verified who the user is.
-create or replace function public.redeem_promo_code(p_code text, p_user_id uuid, p_user_email text, p_event_id uuid)
+-- One row per account that redeemed a code: its credit. Unused while
+-- used_at is null; event_id is the invitation it was spent on.
+create table if not exists public.promo_redemptions (
+  id uuid primary key default gen_random_uuid(),
+  code text not null references public.promo_codes (code),
+  user_id uuid references auth.users (id) on delete set null,
+  plan text not null check (plan in ('premium', 'pro')),
+  event_id uuid references public.events (id) on delete set null,
+  redeemed_at timestamptz not null default now(),
+  used_at timestamptz
+);
+
+-- One code per account.
+create unique index if not exists promo_redemptions_user_id_idx on public.promo_redemptions (user_id);
+create index if not exists promo_redemptions_code_idx on public.promo_redemptions (code);
+
+alter table public.promo_redemptions enable row level security;
+
+drop policy if exists "read own promo redemptions" on public.promo_redemptions;
+create policy "read own promo redemptions"
+  on public.promo_redemptions for select
+  using (auth.uid() = user_id);
+
+-- Redeems a code for an account: checks it and gives the account its
+-- credit. Returns { status, plan? } — 'ok', or why it was refused
+-- ('invalid', 'expired', 'full', 'already_redeemed'). Called only by the
+-- redeem-promo Edge Function (service role), which has already verified
+-- who the user is.
+create or replace function public.redeem_promo_code(p_code text, p_user_id uuid)
 returns jsonb
 language plpgsql
 security definer set search_path = public
 as $$
 declare
   v public.promo_codes%rowtype;
-  v_event public.events%rowtype;
 begin
+  if exists (select 1 from public.promo_redemptions where user_id = p_user_id) then
+    return jsonb_build_object('status', 'already_redeemed');
+  end if;
+  -- Locks the code, so two people can't take the last spot at once.
   select * into v from public.promo_codes where code = upper(trim(p_code)) for update;
   if not found or not v.active then
     return jsonb_build_object('status', 'invalid');
   end if;
-  if v.redeemed_at is not null then
-    return jsonb_build_object('status', 'used');
-  end if;
   if v.expires_at is not null and v.expires_at < now() then
     return jsonb_build_object('status', 'expired');
   end if;
-  if v.assigned_email is not null and lower(trim(v.assigned_email)) is distinct from lower(trim(p_user_email)) then
-    return jsonb_build_object('status', 'not_yours');
-  end if;
-  if exists (select 1 from public.promo_codes where redeemed_by = p_user_id) then
-    return jsonb_build_object('status', 'already_redeemed');
+  if (select count(*) from public.promo_redemptions where code = v.code) >= v.max_redemptions then
+    return jsonb_build_object('status', 'full');
   end if;
 
+  begin
+    insert into public.promo_redemptions (code, user_id, plan) values (v.code, p_user_id, v.plan);
+  exception when unique_violation then
+    return jsonb_build_object('status', 'already_redeemed');
+  end;
+  return jsonb_build_object('status', 'ok', 'plan', v.plan);
+end;
+$$;
+
+revoke execute on function public.redeem_promo_code(text, uuid) from public, anon, authenticated;
+grant execute on function public.redeem_promo_code(text, uuid) to service_role;
+
+-- Spends an account's unused credit on one of its events, in one
+-- transaction: marks the credit used, records a ₱0 payment and upgrades
+-- the event. Returns { status, plan? } — 'ok', or 'no_credit',
+-- 'event_not_found', 'already_has_plan'. Service role only, like above.
+create or replace function public.use_promo_credit(p_user_id uuid, p_event_id uuid)
+returns jsonb
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v public.promo_redemptions%rowtype;
+  v_event public.events%rowtype;
+begin
+  select * into v from public.promo_redemptions where user_id = p_user_id and used_at is null for update;
+  if not found then
+    return jsonb_build_object('status', 'no_credit');
+  end if;
   select * into v_event from public.events where id = p_event_id and owner_id = p_user_id for update;
   if not found then
     return jsonb_build_object('status', 'event_not_found');
@@ -904,9 +947,7 @@ begin
     return jsonb_build_object('status', 'already_has_plan', 'plan', v.plan);
   end if;
 
-  update public.promo_codes
-    set redeemed_by = p_user_id, redeemed_event_id = v_event.id, redeemed_at = now()
-    where code = v.code;
+  update public.promo_redemptions set used_at = now(), event_id = v_event.id where id = v.id;
 
   insert into public.payments (user_id, event_id, plan, amount_centavos, description, status, provider, provider_payment_id, payment_method, paid_at)
   values (
@@ -922,8 +963,8 @@ begin
 end;
 $$;
 
-revoke execute on function public.redeem_promo_code(text, uuid, text, uuid) from public, anon, authenticated;
-grant execute on function public.redeem_promo_code(text, uuid, text, uuid) to service_role;
+revoke execute on function public.use_promo_credit(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.use_promo_credit(uuid, uuid) to service_role;
 
 -- ─── admin portal & support inbox ──────────────────────────────────────
 -- Make someone an admin (SQL Editor only — users can't set this on their
